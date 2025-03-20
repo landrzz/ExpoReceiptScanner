@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -19,13 +20,14 @@ import {
 import { getReceipts, getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
 import ImageViewerModal from "../components/ImageViewerModal";
+import MonthYearPicker from "../components/MonthYearPicker";
 
 // Fallback mock data for when API fails
-const mockReceipts = [
+const mockReceipts: Receipt[] = [
   {
     id: "1",
     date: "2023-10-15",
-    category: "FOOD",
+    category: "FOOD" as "FOOD",
     amount: 24.99,
     vendor: "Burger King",
     notes: "Lunch with team",
@@ -40,7 +42,7 @@ const mockReceipts = [
   {
     id: "2",
     date: "2023-10-12",
-    category: "GAS",
+    category: "GAS" as "GAS",
     amount: 45.5,
     vendor: "Shell",
     notes: "Full tank",
@@ -55,7 +57,7 @@ const mockReceipts = [
   {
     id: "3",
     date: "2023-10-10",
-    category: "TRAVEL",
+    category: "TRAVEL" as "TRAVEL",
     amount: 125.0,
     vendor: "Uber",
     notes: "Airport trip",
@@ -70,7 +72,7 @@ const mockReceipts = [
   {
     id: "4",
     date: "2023-10-05",
-    category: "OTHER",
+    category: "OTHER" as "OTHER",
     amount: 75.25,
     vendor: "Office Depot",
     notes: "Supplies",
@@ -85,7 +87,7 @@ const mockReceipts = [
   {
     id: "5",
     date: "2023-10-01",
-    category: "FOOD",
+    category: "FOOD" as "FOOD",
     amount: 32.5,
     vendor: "Chipotle",
     notes: "Dinner",
@@ -100,7 +102,7 @@ const mockReceipts = [
   {
     id: "6",
     date: "2023-09-28",
-    category: "GAS",
+    category: "GAS" as "GAS",
     amount: 42.75,
     vendor: "Exxon",
     notes: "",
@@ -115,7 +117,7 @@ const mockReceipts = [
   {
     id: "7",
     date: "2023-09-25",
-    category: "TRAVEL",
+    category: "TRAVEL" as "TRAVEL",
     amount: 350.0,
     vendor: "Delta",
     notes: "Baggage fee",
@@ -130,7 +132,7 @@ const mockReceipts = [
   {
     id: "8",
     date: "2023-09-20",
-    category: "FOOD",
+    category: "FOOD" as "FOOD",
     amount: 18.99,
     vendor: "Subway",
     notes: "Lunch",
@@ -154,8 +156,11 @@ const categoryColors = {
 
 const HistoryScreen = () => {
   const router = useRouter();
-  const [selectedMonth, setSelectedMonth] = useState("October 2023");
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedReceipts, setSelectedReceipts] = useState<string[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,35 +168,24 @@ const HistoryScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
 
-  const months = [
-    "October 2023",
-    "September 2023",
-    "August 2023",
-    "July 2023",
-    "June 2023",
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
-  // Parse month string to get month and year numbers
-  const parseMonthString = (monthStr: string) => {
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    const parts = monthStr.split(" ");
-    const monthName = parts[0];
-    const year = parseInt(parts[1]);
-    const month = monthNames.indexOf(monthName) + 1;
-    return { month, year };
+  // Format the selected date as a string
+  const getFormattedDate = () => {
+    return `${monthNames[selectedDate.month - 1]} ${selectedDate.year}`;
   };
 
   useEffect(() => {
@@ -199,26 +193,18 @@ const HistoryScreen = () => {
       try {
         setLoading(true);
 
-        // If a month is selected, fetch receipts for that month
-        if (selectedMonth) {
-          const { month, year } = parseMonthString(selectedMonth);
-          const { data, error } = await getReceiptsByMonth(month, year);
-          if (error) {
-            console.error("Month receipts error:", error);
-            throw error;
-          }
-          console.log("Month receipts data:", data);
-          setReceipts(data.length > 0 ? data : mockReceipts);
-        } else {
-          // Otherwise fetch all receipts
-          const { data, error } = await getReceipts();
-          if (error) {
-            console.error("All receipts error:", error);
-            throw error;
-          }
-          console.log("All receipts data:", data);
-          setReceipts(data.length > 0 ? data : mockReceipts);
+        // Fetch receipts for the selected month and year
+        const { data, error } = await getReceiptsByMonth(
+          selectedDate.month,
+          selectedDate.year
+        );
+        
+        if (error) {
+          console.error("Month receipts error:", error);
+          throw error;
         }
+        console.log("Month receipts data:", data);
+        setReceipts(data.length > 0 ? data : mockReceipts);
       } catch (err) {
         console.error("Error fetching receipts:", err);
         setError(err as Error);
@@ -230,7 +216,11 @@ const HistoryScreen = () => {
     };
 
     fetchReceipts();
-  }, [selectedMonth]);
+  }, [selectedDate]);
+
+  const handleDateSelection = (year: number, month: number) => {
+    setSelectedDate({ year, month });
+  };
 
   const toggleReceiptSelection = (id: string) => {
     if (selectedReceipts.includes(id)) {
@@ -347,39 +337,35 @@ const HistoryScreen = () => {
         </View>
       </View>
 
-      {/* Month Selector */}
+      {/* Month and Year Selector */}
       <View className="p-4 bg-gray-50">
         <TouchableOpacity
-          onPress={() => setShowMonthPicker(!showMonthPicker)}
+          onPress={() => setShowDatePicker(true)}
           className="flex-row items-center justify-between bg-white p-3 rounded-lg border border-gray-200"
         >
           <View className="flex-row items-center">
             <Calendar size={20} color="#4B5563" />
-            <Text className="ml-2 font-medium">{selectedMonth}</Text>
+            <Text className="ml-2 font-medium">{getFormattedDate()}</Text>
           </View>
           <ChevronDown size={20} color="#4B5563" />
         </TouchableOpacity>
 
-        {showMonthPicker && (
-          <View className="bg-white rounded-lg mt-2 border border-gray-200 overflow-hidden">
-            {months.map((month) => (
-              <TouchableOpacity
-                key={month}
-                onPress={() => {
-                  setSelectedMonth(month);
-                  setShowMonthPicker(false);
-                }}
-                className={`p-3 ${selectedMonth === month ? "bg-blue-50" : ""}`}
-              >
-                <Text
-                  className={`${selectedMonth === month ? "font-bold text-blue-500" : "text-gray-700"}`}
-                >
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* Date Picker Modal */}
+        <Modal
+          visible={showDatePicker}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50 p-4">
+            <MonthYearPicker
+              onSelectDate={handleDateSelection}
+              initialYear={selectedDate.year}
+              initialMonth={selectedDate.month}
+              onClose={() => setShowDatePicker(false)}
+            />
           </View>
-        )}
+        </Modal>
       </View>
 
       {/* Batch Action Bar - Only show when items are selected */}
