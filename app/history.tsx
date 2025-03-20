@@ -1,0 +1,450 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import {
+  ArrowLeft,
+  Calendar,
+  Filter,
+  ChevronDown,
+  Settings,
+} from "lucide-react-native";
+import { getReceipts, getReceiptsByMonth } from "../lib/receipt-service";
+import { Receipt } from "../lib/supabase";
+import ImageViewerModal from "../components/ImageViewerModal";
+
+// Fallback mock data for when API fails
+const mockReceipts = [
+  {
+    id: "1",
+    date: "2023-10-15",
+    category: "FOOD",
+    amount: 24.99,
+    vendor: "Burger King",
+    notes: "Lunch with team",
+    image_url:
+      "https://images.unsplash.com/photo-1572441420532-e7f6e24e1848?w=400&q=80",
+    time: "12:30",
+    location: "New York, NY",
+    created_at: "2023-10-15T12:30:00Z",
+    updated_at: "2023-10-15T12:30:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "2",
+    date: "2023-10-12",
+    category: "GAS",
+    amount: 45.5,
+    vendor: "Shell",
+    notes: "Full tank",
+    image_url:
+      "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400&q=80",
+    time: "10:15",
+    location: "Boston, MA",
+    created_at: "2023-10-12T10:15:00Z",
+    updated_at: "2023-10-12T10:15:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "3",
+    date: "2023-10-10",
+    category: "TRAVEL",
+    amount: 125.0,
+    vendor: "Uber",
+    notes: "Airport trip",
+    image_url:
+      "https://images.unsplash.com/photo-1595953832255-a2ba391cdc78?w=400&q=80",
+    time: "08:45",
+    location: "Chicago, IL",
+    created_at: "2023-10-10T08:45:00Z",
+    updated_at: "2023-10-10T08:45:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "4",
+    date: "2023-10-05",
+    category: "OTHER",
+    amount: 75.25,
+    vendor: "Office Depot",
+    notes: "Supplies",
+    image_url:
+      "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80",
+    time: "14:20",
+    location: "San Francisco, CA",
+    created_at: "2023-10-05T14:20:00Z",
+    updated_at: "2023-10-05T14:20:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "5",
+    date: "2023-10-01",
+    category: "FOOD",
+    amount: 32.5,
+    vendor: "Chipotle",
+    notes: "Dinner",
+    image_url:
+      "https://images.unsplash.com/photo-1593538312308-d4c29d8dc7f1?w=400&q=80",
+    time: "19:30",
+    location: "Los Angeles, CA",
+    created_at: "2023-10-01T19:30:00Z",
+    updated_at: "2023-10-01T19:30:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "6",
+    date: "2023-09-28",
+    category: "GAS",
+    amount: 42.75,
+    vendor: "Exxon",
+    notes: "",
+    image_url:
+      "https://images.unsplash.com/photo-1605849285614-e5884d961a49?w=400&q=80",
+    time: "16:45",
+    location: "Seattle, WA",
+    created_at: "2023-09-28T16:45:00Z",
+    updated_at: "2023-09-28T16:45:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "7",
+    date: "2023-09-25",
+    category: "TRAVEL",
+    amount: 350.0,
+    vendor: "Delta",
+    notes: "Baggage fee",
+    image_url:
+      "https://images.unsplash.com/photo-1647427060118-4911c9821b82?w=400&q=80",
+    time: "11:10",
+    location: "Denver, CO",
+    created_at: "2023-09-25T11:10:00Z",
+    updated_at: "2023-09-25T11:10:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+  {
+    id: "8",
+    date: "2023-09-20",
+    category: "FOOD",
+    amount: 18.99,
+    vendor: "Subway",
+    notes: "Lunch",
+    image_url:
+      "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=400&q=80",
+    time: "13:25",
+    location: "Miami, FL",
+    created_at: "2023-09-20T13:25:00Z",
+    updated_at: "2023-09-20T13:25:00Z",
+    user_id: "00000000-0000-0000-0000-000000000000",
+  },
+];
+
+// Category color mapping
+const categoryColors = {
+  FOOD: "bg-orange-500",
+  GAS: "bg-blue-500",
+  TRAVEL: "bg-purple-500",
+  OTHER: "bg-gray-500",
+};
+
+const HistoryScreen = () => {
+  const router = useRouter();
+  const [selectedMonth, setSelectedMonth] = useState("October 2023");
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [selectedReceipts, setSelectedReceipts] = useState<string[]>([]);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+
+  const months = [
+    "October 2023",
+    "September 2023",
+    "August 2023",
+    "July 2023",
+    "June 2023",
+  ];
+
+  // Parse month string to get month and year numbers
+  const parseMonthString = (monthStr: string) => {
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const parts = monthStr.split(" ");
+    const monthName = parts[0];
+    const year = parseInt(parts[1]);
+    const month = monthNames.indexOf(monthName) + 1;
+    return { month, year };
+  };
+
+  useEffect(() => {
+    const fetchReceipts = async () => {
+      try {
+        setLoading(true);
+
+        // If a month is selected, fetch receipts for that month
+        if (selectedMonth) {
+          const { month, year } = parseMonthString(selectedMonth);
+          const { data, error } = await getReceiptsByMonth(month, year);
+          if (error) {
+            console.error("Month receipts error:", error);
+            throw error;
+          }
+          console.log("Month receipts data:", data);
+          setReceipts(data.length > 0 ? data : mockReceipts);
+        } else {
+          // Otherwise fetch all receipts
+          const { data, error } = await getReceipts();
+          if (error) {
+            console.error("All receipts error:", error);
+            throw error;
+          }
+          console.log("All receipts data:", data);
+          setReceipts(data.length > 0 ? data : mockReceipts);
+        }
+      } catch (err) {
+        console.error("Error fetching receipts:", err);
+        setError(err as Error);
+        // Fallback to mock data when there's an error
+        setReceipts(mockReceipts);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReceipts();
+  }, [selectedMonth]);
+
+  const toggleReceiptSelection = (id: string) => {
+    if (selectedReceipts.includes(id)) {
+      setSelectedReceipts(
+        selectedReceipts.filter((receiptId) => receiptId !== id),
+      );
+    } else {
+      setSelectedReceipts([...selectedReceipts, id]);
+    }
+  };
+
+  const handleBatchAction = (action: "pdf" | "submit") => {
+    if (selectedReceipts.length === 0) return;
+
+    console.log(`Performing ${action} action on receipts:`, selectedReceipts);
+    // In a real app, this would trigger the appropriate action
+
+    // Reset selection after action
+    setSelectedReceipts([]);
+  };
+
+  const renderReceiptItem = ({ item }: { item: Receipt }) => {
+    const isSelected = selectedReceipts.includes(item.id);
+
+    const handleImagePress = () => {
+      if (item.image_url) {
+        setSelectedImage(item.image_url);
+        setImageViewerVisible(true);
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        onPress={() => toggleReceiptSelection(item.id)}
+        onLongPress={() => router.push("/receipt-details")}
+        className={`p-4 border-b border-gray-200 ${isSelected ? "bg-blue-50" : ""}`}
+      >
+        <View className="flex-row justify-between items-center">
+          <TouchableOpacity
+            onPress={handleImagePress}
+            className="w-16 h-16 bg-gray-200 rounded-md mr-3 overflow-hidden"
+            activeOpacity={item.image_url ? 0.7 : 1}
+          >
+            {item.image_url ? (
+              <Image
+                source={{ uri: item.image_url }}
+                className="w-full h-full"
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <View
+                className={`w-full h-full ${categoryColors[item.category as keyof typeof categoryColors]} opacity-30`}
+              >
+                <View className="absolute inset-0 items-center justify-center">
+                  <Text className="text-xs font-bold text-gray-700">
+                    {item.category}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <View className="flex-1">
+            <View className="flex-row items-center">
+              <View
+                className={`w-3 h-3 rounded-full ${categoryColors[item.category as keyof typeof categoryColors]} mr-2`}
+              />
+              <Text className="font-semibold text-gray-800">{item.vendor}</Text>
+            </View>
+            <Text className="text-gray-500 text-sm mt-1">
+              {item.notes || "No notes"}
+            </Text>
+          </View>
+
+          <View className="items-end">
+            <Text className="font-bold">${item.amount.toFixed(2)}</Text>
+            <Text className="text-xs text-gray-500">
+              {new Date(item.date).toLocaleDateString()}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View className="flex-1 bg-white">
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <ImageViewerModal
+          isVisible={imageViewerVisible}
+          imageUrl={selectedImage}
+          onClose={() => {
+            setImageViewerVisible(false);
+            setSelectedImage(null);
+          }}
+        />
+      )}
+
+      {/* Header */}
+      <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
+        <TouchableOpacity onPress={() => router.back()} className="p-2">
+          <ArrowLeft size={24} color="#000" />
+        </TouchableOpacity>
+        <Text className="text-xl font-bold">Receipt History</Text>
+        <View className="flex-row">
+          <TouchableOpacity className="p-2 mr-1">
+            <Settings size={22} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity className="p-2">
+            <Filter size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Month Selector */}
+      <View className="p-4 bg-gray-50">
+        <TouchableOpacity
+          onPress={() => setShowMonthPicker(!showMonthPicker)}
+          className="flex-row items-center justify-between bg-white p-3 rounded-lg border border-gray-200"
+        >
+          <View className="flex-row items-center">
+            <Calendar size={20} color="#4B5563" />
+            <Text className="ml-2 font-medium">{selectedMonth}</Text>
+          </View>
+          <ChevronDown size={20} color="#4B5563" />
+        </TouchableOpacity>
+
+        {showMonthPicker && (
+          <View className="bg-white rounded-lg mt-2 border border-gray-200 overflow-hidden">
+            {months.map((month) => (
+              <TouchableOpacity
+                key={month}
+                onPress={() => {
+                  setSelectedMonth(month);
+                  setShowMonthPicker(false);
+                }}
+                className={`p-3 ${selectedMonth === month ? "bg-blue-50" : ""}`}
+              >
+                <Text
+                  className={`${selectedMonth === month ? "font-bold text-blue-500" : "text-gray-700"}`}
+                >
+                  {month}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Batch Action Bar - Only show when items are selected */}
+      {selectedReceipts.length > 0 && (
+        <View className="flex-row justify-between items-center p-3 bg-blue-500">
+          <Text className="text-white font-medium">
+            {selectedReceipts.length} receipts selected
+          </Text>
+          <View className="flex-row">
+            <TouchableOpacity
+              onPress={() => handleBatchAction("pdf")}
+              className="bg-white py-1 px-3 rounded-lg mr-2"
+            >
+              <Text className="text-blue-500 font-medium">Generate PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleBatchAction("submit")}
+              className="bg-white py-1 px-3 rounded-lg"
+            >
+              <Text className="text-blue-500 font-medium">Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Receipt List */}
+      {loading ? (
+        <View className="flex-1 items-center justify-center p-10">
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text className="text-gray-500 mt-4">Loading receipts...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center p-10">
+          <Text className="text-red-500 text-center">
+            Failed to load receipts
+          </Text>
+          <TouchableOpacity
+            className="mt-4 bg-blue-500 py-2 px-4 rounded-lg"
+            onPress={() => router.push("/")}
+          >
+            <Text className="text-white font-medium">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : receipts.length === 0 ? (
+        <View className="flex-1 items-center justify-center p-10">
+          <Text className="text-gray-500 text-center">
+            No receipts found for this period
+          </Text>
+          <TouchableOpacity
+            className="mt-4 bg-blue-500 py-2 px-4 rounded-lg"
+            onPress={() => router.push("/scan")}
+          >
+            <Text className="text-white font-medium">Scan a Receipt</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={receipts}
+          renderItem={renderReceiptItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      )}
+    </View>
+  );
+};
+
+export default HistoryScreen;
