@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -251,6 +252,26 @@ const HistoryScreen = () => {
         setImageViewerVisible(true);
       }
     };
+    
+    // Handle image URI for different platforms
+    const getImageSource = (uri: string | null) => {
+      if (!uri) return null;
+      
+      // Log the image URI for debugging
+      console.log("History Image URI:", uri);
+      
+      // For iOS, ensure the URI is properly formatted
+      if (Platform.OS === 'ios' && uri.startsWith('file://')) {
+        // iOS needs special handling for local file URIs
+        return { uri };
+      } else if (Platform.OS === 'ios' && !uri.startsWith('http')) {
+        // If it's a local path without the file:// prefix, add it
+        return { uri: `file://${uri}` };
+      }
+      
+      // For web and Android, use the URI as is
+      return { uri };
+    };
 
     return (
       <TouchableOpacity
@@ -266,10 +287,13 @@ const HistoryScreen = () => {
           >
             {item.image_url ? (
               <Image
-                source={{ uri: item.image_url }}
+                source={getImageSource(item.image_url) || { uri: '' }}
                 className="w-full h-full"
                 contentFit="cover"
                 transition={200}
+                onError={() => {
+                  console.log("History image loading error for:", item.image_url);
+                }}
               />
             ) : (
               <View

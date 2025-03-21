@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Calendar, Clock, DollarSign, MapPin } from "lucide-react-native";
 import { useRouter } from "expo-router";
@@ -109,52 +110,80 @@ const RecentReceipts = ({
     closeModal();
   };
 
-  const renderReceiptItem = ({ item }: { item: Receipt }) => (
-    <TouchableOpacity
-      className="flex-row p-4 bg-white rounded-lg mb-3 shadow-sm border border-gray-100"
-      onPress={() => handleReceiptPress(item)}
-    >
-      <View className="mr-3 h-12 w-12 rounded-full overflow-hidden justify-center items-center">
-        {item.image_url ? (
-          <Image source={{ uri: item.image_url }} className="h-full w-full" />
-        ) : (
-          <View
-            className={`h-full w-full ${getCategoryColor(item.category)} justify-center items-center`}
-          >
-            <Text className="text-white font-bold">
-              {item.category.charAt(0)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View className="flex-1">
-        <View className="flex-row justify-between items-start">
-          <View className="flex-1">
-            <Text className="font-bold text-base">{item.category}</Text>
-            <View className="flex-row items-center mt-1">
-              <MapPin size={14} color="#6b7280" />
-              <Text className="text-gray-500 text-xs ml-1">
-                {item.location || "No location"}
+  const renderReceiptItem = ({ item }: { item: Receipt }) => {
+    // Handle image URI for different platforms
+    const getImageSource = (uri: string | null) => {
+      if (!uri) return null;
+      
+      // Log the image URI for debugging
+      console.log("Image URI:", uri);
+      
+      // For iOS, ensure the URI is properly formatted
+      if (Platform.OS === 'ios' && uri.startsWith('file://')) {
+        // iOS needs special handling for local file URIs
+        return { uri };
+      } else if (Platform.OS === 'ios' && !uri.startsWith('http')) {
+        // If it's a local path without the file:// prefix, add it
+        return { uri: `file://${uri}` };
+      }
+      
+      // For web and Android, use the URI as is
+      return { uri };
+    };
+    
+    return (
+      <TouchableOpacity
+        className="flex-row p-4 bg-white rounded-lg mb-3 shadow-sm border border-gray-100"
+        onPress={() => handleReceiptPress(item)}
+      >
+        <View className="mr-3 h-12 w-12 rounded-full overflow-hidden justify-center items-center">
+          {item.image_url ? (
+            <Image 
+              source={getImageSource(item.image_url) || { uri: '' }}
+              className="h-full w-full"
+              onError={() => {
+                console.log("Image loading error for:", item.image_url);
+              }}
+            />
+          ) : (
+            <View
+              className={`h-full w-full ${getCategoryColor(item.category)} justify-center items-center`}
+            >
+              <Text className="text-white font-bold">
+                {item.category.charAt(0)}
               </Text>
             </View>
-          </View>
-          <Text className="font-bold text-base">${item.amount.toFixed(2)}</Text>
+          )}
         </View>
 
-        <View className="flex-row mt-2">
-          <View className="flex-row items-center mr-3">
-            <Calendar size={14} color="#6b7280" />
-            <Text className="text-gray-500 text-xs ml-1">{item.date}</Text>
+        <View className="flex-1">
+          <View className="flex-row justify-between items-start">
+            <View className="flex-1">
+              <Text className="font-bold text-base">{item.category}</Text>
+              <View className="flex-row items-center mt-1">
+                <MapPin size={14} color="#6b7280" />
+                <Text className="text-gray-500 text-xs ml-1">
+                  {item.location || "No location"}
+                </Text>
+              </View>
+            </View>
+            <Text className="font-bold text-base">${item.amount.toFixed(2)}</Text>
           </View>
-          <View className="flex-row items-center">
-            <Clock size={14} color="#6b7280" />
-            <Text className="text-gray-500 text-xs ml-1">{item.time}</Text>
+
+          <View className="flex-row mt-2">
+            <View className="flex-row items-center mr-3">
+              <Calendar size={14} color="#6b7280" />
+              <Text className="text-gray-500 text-xs ml-1">{item.date}</Text>
+            </View>
+            <View className="flex-row items-center">
+              <Clock size={14} color="#6b7280" />
+              <Text className="text-gray-500 text-xs ml-1">{item.time}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View className="bg-gray-50 p-4 rounded-lg">

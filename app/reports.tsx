@@ -211,12 +211,7 @@ const ReportsScreen = () => {
           </style>
         </head>
         <body>
-          <div class="controls">
-            <button class="btn download-btn" onclick="generatePDF()">Download PDF</button>
-            <button class="btn print-btn" onclick="window.print()">Print</button>
-          </div>
-
-          <div id="content" class="container">
+<div id="content" class="container">
             <div class="header">
               <h1>Expense Report</h1>
               <p>${formattedDate}</p>
