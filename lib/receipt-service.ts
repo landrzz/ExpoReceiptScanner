@@ -113,3 +113,47 @@ export async function deleteReceipt(id: string) {
     return { success: false, error };
   }
 }
+
+export async function updateReceipt(
+  id: string,
+  {
+    category,
+    notes,
+    location,
+    amount,
+    vendor,
+  }: {
+    category?: string;
+    notes?: string;
+    location?: string;
+    amount?: number;
+    vendor?: string;
+  }
+) {
+  try {
+    // Only update fields that are provided
+    const updateData: Record<string, any> = {};
+    
+    if (category !== undefined) updateData.category = category;
+    if (notes !== undefined) updateData.notes = notes;
+    if (location !== undefined) updateData.location = location;
+    if (amount !== undefined) updateData.amount = amount;
+    if (vendor !== undefined) updateData.vendor = vendor;
+    
+    // Add updated_at timestamp
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("receipts")
+      .update(updateData)
+      .eq("id", id)
+      .eq("user_id", DEMO_USER_ID)
+      .select();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error updating receipt:", error);
+    return { data: null, error };
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,37 +13,99 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin } from "lucide-react-native";
-import { saveReceipt } from "../lib/receipt-service";
+import { saveReceipt, updateReceipt } from "../lib/receipt-service";
 import * as Location from 'expo-location';
 
 const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
 
 export default function ReceiptDetailsScreen() {
   const router = useRouter();
-  const { imageUri } = useLocalSearchParams();
-
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [notes, setNotes] = useState("");
-  const [location, setLocation] = useState("");
+  const params = useLocalSearchParams();
+  
+  // Extract and convert params
+  const imageUri = params.imageUri as string;
+  const receiptId = params.id as string;
+  const isEditing = params.isEditing === 'true';
+  
+  // Form state
+  const [formState, setFormState] = useState({
+    category: '',
+    notes: '',
+    location: '',
+    amount: '0',
+    vendor: ''
+  });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
+  // Handle direct edits to form fields
+  const updateFormField = (field: string, value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Initialize form for editing mode if applicable
+  useEffect(() => {
+    console.log("Initializing form. Is editing:", isEditing);
+    console.log("Params:", params);
+    
+    if (isEditing) {
+      try {
+        setFormState({
+          category: String(params.category || ''),
+          notes: String(params.notes || ''),
+          location: String(params.location || ''),
+          amount: String(params.amount || '0'),
+          vendor: String(params.vendor || '')
+        });
+        console.log("Form state initialized for editing.");
+      } catch (error) {
+        console.error("Error initializing form state:", error);
+      }
+    }
+  }, []);
+
   const handleSave = async () => {
-    if (!selectedCategory) {
+    if (!formState.category) {
       Alert.alert("Error", "Please select a category");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await saveReceipt({
-        imageUri: imageUri as string,
-        category: selectedCategory,
-        notes,
-        location,
-      });
+      if (isEditing && receiptId) {
+        // Update existing receipt
+        console.log("Updating receipt:", receiptId);
+        console.log("Form data:", formState);
+        
+        const { data, error } = await updateReceipt(receiptId, {
+          category: formState.category,
+          notes: formState.notes,
+          location: formState.location,
+          amount: parseFloat(formState.amount) || 0,
+          vendor: formState.vendor
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        console.log("Receipt updated successfully", data);
+      } else {
+        // Create new receipt
+        console.log("Creating new receipt");
+        const { data, error } = await saveReceipt({
+          imageUri: imageUri,
+          category: formState.category,
+          notes: formState.notes,
+          location: formState.location,
+          amount: parseFloat(formState.amount) || 0,
+          vendor: formState.vendor
+        });
+
+        if (error) throw error;
+        console.log("Receipt created successfully", data);
+      }
 
       // Navigate back to home
       router.push("/");
@@ -119,7 +181,7 @@ export default function ReceiptDetailsScreen() {
       // Set the location
       const locationText = formattedAddress || `${currentLocation.coords.latitude.toFixed(6)}, ${currentLocation.coords.longitude.toFixed(6)}`;
       console.log("Setting location to:", locationText);
-      setLocation(locationText);
+      updateFormField('location', locationText);
       
     } catch (error) {
       console.error("Error getting location:", error);
@@ -160,14 +222,14 @@ export default function ReceiptDetailsScreen() {
       <ScrollView className="flex-1 p-4">
         <View className="mb-6">
           <Text className="text-2xl font-bold text-gray-800 mb-4">
-            Receipt Details
+            {isEditing ? "Edit Receipt" : "Receipt Details"}
           </Text>
 
           {/* Image Preview */}
           <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-6">
             {imageUri ? (
               <Image
-                source={{ uri: imageUri as string }}
+                source={{ uri: imageUri }}
                 className="w-full h-64"
                 resizeMode="contain"
               />
@@ -187,11 +249,11 @@ export default function ReceiptDetailsScreen() {
               {categories.map((category) => (
                 <TouchableOpacity
                   key={category}
-                  onPress={() => setSelectedCategory(category)}
-                  className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${selectedCategory === category ? "bg-blue-500" : "bg-white"}`}
+                  onPress={() => updateFormField('category', category)}
+                  className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? "bg-blue-500" : "bg-white"}`}
                 >
                   <Text
-                    className={`text-center font-medium ${selectedCategory === category ? "text-white" : "text-gray-700"}`}
+                    className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}
                   >
                     {category}
                   </Text>
@@ -208,10 +270,37 @@ export default function ReceiptDetailsScreen() {
             <TextInput
               className="bg-white p-4 rounded-lg text-gray-800"
               placeholder="Add notes about this receipt"
-              value={notes}
-              onChangeText={setNotes}
+              value={formState.notes}
+              onChangeText={(text) => updateFormField('notes', text)}
               multiline
               numberOfLines={3}
+            />
+          </View>
+          
+          {/* Amount Input */}
+          <View className="mb-6">
+            <Text className="text-lg font-semibold text-gray-800 mb-2">
+              Amount
+            </Text>
+            <TextInput
+              className="bg-white p-4 rounded-lg text-gray-800"
+              placeholder="Enter amount"
+              value={formState.amount}
+              onChangeText={(text) => updateFormField('amount', text)}
+              keyboardType="numeric"
+            />
+          </View>
+          
+          {/* Vendor Input */}
+          <View className="mb-6">
+            <Text className="text-lg font-semibold text-gray-800 mb-2">
+              Vendor
+            </Text>
+            <TextInput
+              className="bg-white p-4 rounded-lg text-gray-800"
+              placeholder="Enter vendor name"
+              value={formState.vendor}
+              onChangeText={(text) => updateFormField('vendor', text)}
             />
           </View>
 
@@ -233,8 +322,8 @@ export default function ReceiptDetailsScreen() {
               <TextInput
                 className="flex-1 p-3 text-gray-800"
                 placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
-                value={location}
-                onChangeText={setLocation}
+                value={formState.location}
+                onChangeText={(text) => updateFormField('location', text)}
                 editable={!isLoadingLocation}
               />
             </View>
@@ -247,7 +336,7 @@ export default function ReceiptDetailsScreen() {
             className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
           >
             <Text className="text-white font-bold text-lg">
-              {isSubmitting ? "Saving..." : "Save Receipt"}
+              {isSubmitting ? "Saving..." : (isEditing ? "Update Receipt" : "Save Receipt")}
             </Text>
           </TouchableOpacity>
         </View>

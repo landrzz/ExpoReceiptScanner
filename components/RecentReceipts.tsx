@@ -91,6 +91,24 @@ const RecentReceipts = ({
     fetchReceipts();
   };
 
+  const handleReceiptEdit = (receipt: Receipt) => {
+    console.log("Editing receipt:", receipt.id);
+    router.push({
+      pathname: "/receipt-details",
+      params: {
+        id: receipt.id,
+        imageUri: receipt.image_url,
+        category: receipt.category,
+        notes: receipt.notes || '',
+        location: receipt.location || '',
+        amount: receipt.amount.toString(),
+        vendor: receipt.vendor || '',
+        isEditing: 'true'
+      }
+    });
+    closeModal();
+  };
+
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       className="flex-row p-4 bg-white rounded-lg mb-3 shadow-sm border border-gray-100"
@@ -181,6 +199,7 @@ const RecentReceipts = ({
         receipt={selectedReceipt}
         onClose={closeModal}
         onDelete={handleReceiptDelete}
+        onEdit={handleReceiptEdit}
       />
     </View>
   );

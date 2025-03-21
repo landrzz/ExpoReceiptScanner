@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
 import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react-native';
 import { Receipt, supabase } from '../lib/supabase';
+import { useRouter } from 'expo-router';
 
 type ReceiptDetailsModalProps = {
   isVisible: boolean;
   receipt: Receipt | null;
   onClose: () => void;
   onDelete?: (receiptId: string) => void;
+  onEdit?: (receipt: Receipt) => void;
 };
 
 const getCategoryColor = (category: Receipt['category']) => {
@@ -29,10 +31,12 @@ const ReceiptDetailsModal = ({
   isVisible, 
   receipt, 
   onClose,
-  onDelete 
+  onDelete,
+  onEdit
 }: ReceiptDetailsModalProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
   
   if (!receipt) return null;
 
@@ -102,6 +106,34 @@ const ReceiptDetailsModal = ({
         ]
       );
     }
+  };
+
+  const handleEditPress = () => {
+    console.log("Edit button pressed for receipt:", receipt.id);
+    
+    // If onEdit callback is provided, use it
+    if (onEdit) {
+      onEdit(receipt);
+      return;
+    }
+    
+    // Otherwise navigate to the receipt-details page with the receipt data
+    router.push({
+      pathname: "/receipt-details",
+      params: {
+        id: receipt.id,
+        imageUri: receipt.image_url,
+        category: receipt.category,
+        notes: receipt.notes || '',
+        location: receipt.location || '',
+        amount: receipt.amount.toString(),
+        vendor: receipt.vendor || '',
+        isEditing: 'true'
+      }
+    });
+    
+    // Close the modal
+    onClose();
   };
 
   return (
@@ -205,7 +237,11 @@ const ReceiptDetailsModal = ({
             
             {/* Action Buttons */}
             <View className="flex-row justify-between mb-6">
-              <TouchableOpacity className="flex-1 mr-2 bg-blue-500 py-3 rounded-lg items-center">
+              <TouchableOpacity 
+                className="flex-1 mr-2 bg-blue-500 py-3 rounded-lg items-center"
+                onPress={handleEditPress}
+                activeOpacity={0.7}
+              >
                 <Text className="text-white font-medium">Edit Receipt</Text>
               </TouchableOpacity>
               <TouchableOpacity 
