@@ -204,12 +204,12 @@ const HistoryScreen = () => {
           throw error;
         }
         console.log("Month receipts data:", data);
-        setReceipts(data.length > 0 ? data : mockReceipts);
+        setReceipts(data || []);
       } catch (err) {
         console.error("Error fetching receipts:", err);
         setError(err as Error);
-        // Fallback to mock data when there's an error
-        setReceipts(mockReceipts);
+        // Show empty list on error instead of mock data
+        setReceipts([]);
       } finally {
         setLoading(false);
       }
@@ -323,9 +323,7 @@ const HistoryScreen = () => {
 
       {/* Header */}
       <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
-        <TouchableOpacity onPress={() => router.back()} className="p-2">
-          <ArrowLeft size={24} color="#000" />
-        </TouchableOpacity>
+        <View className="w-8"></View>
         <Text className="text-xl font-bold">Receipt History</Text>
         <View className="flex-row">
           <TouchableOpacity className="p-2 mr-1">
