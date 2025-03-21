@@ -11,6 +11,7 @@ import { Calendar, Clock, DollarSign, MapPin } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { getReceipts } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
+import ReceiptDetailsModal from "./ReceiptDetailsModal";
 
 type RecentReceiptsProps = {
   receipts?: Receipt[];
@@ -40,6 +41,8 @@ const RecentReceipts = ({
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     // If receipts are provided as props, use those
@@ -67,10 +70,20 @@ const RecentReceipts = ({
     fetchReceipts();
   }, [propReceipts]);
 
+  const handleReceiptPress = (receipt: Receipt) => {
+    setSelectedReceipt(receipt);
+    setModalVisible(true);
+    onReceiptPress(receipt); // Still call the parent's onReceiptPress if provided
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+  };
+
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
     <TouchableOpacity
       className="flex-row p-4 bg-white rounded-lg mb-3 shadow-sm border border-gray-100"
-      onPress={() => onReceiptPress(item)}
+      onPress={() => handleReceiptPress(item)}
     >
       <View className="mr-3 h-12 w-12 rounded-full overflow-hidden justify-center items-center">
         {item.image_url ? (
@@ -150,6 +163,13 @@ const RecentReceipts = ({
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Receipt Details Modal */}
+      <ReceiptDetailsModal 
+        isVisible={modalVisible}
+        receipt={selectedReceipt}
+        onClose={closeModal}
+      />
     </View>
   );
 };
