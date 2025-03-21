@@ -44,6 +44,23 @@ const RecentReceipts = ({
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
+  const fetchReceipts = async () => {
+    // Skip fetching if receipts are provided as props
+    if (propReceipts) return;
+    
+    try {
+      setLoading(true);
+      const { data, error } = await getReceipts();
+      if (error) throw error;
+      setReceipts(data.slice(0, 3)); // Only show the 3 most recent
+    } catch (err) {
+      console.error("Error fetching receipts:", err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // If receipts are provided as props, use those
     if (propReceipts) {
@@ -53,20 +70,6 @@ const RecentReceipts = ({
     }
 
     // Otherwise fetch from API
-    const fetchReceipts = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await getReceipts();
-        if (error) throw error;
-        setReceipts(data.slice(0, 3)); // Only show the 3 most recent
-      } catch (err) {
-        console.error("Error fetching receipts:", err);
-        setError(err as Error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReceipts();
   }, [propReceipts]);
 
@@ -78,6 +81,14 @@ const RecentReceipts = ({
 
   const closeModal = () => {
     setModalVisible(false);
+  };
+
+  const handleReceiptDelete = (receiptId: string) => {
+    console.log("Receipt deleted, refreshing list:", receiptId);
+    // Remove the deleted receipt from the local state immediately for a faster UI response
+    setReceipts(prevReceipts => prevReceipts.filter(receipt => receipt.id !== receiptId));
+    // Refresh the list from server to get the latest data
+    fetchReceipts();
   };
 
   const renderReceiptItem = ({ item }: { item: Receipt }) => (
@@ -169,6 +180,7 @@ const RecentReceipts = ({
         isVisible={modalVisible}
         receipt={selectedReceipt}
         onClose={closeModal}
+        onDelete={handleReceiptDelete}
       />
     </View>
   );

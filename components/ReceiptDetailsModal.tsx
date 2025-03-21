@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
 import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react-native';
-import { Receipt } from '../lib/supabase';
+import { Receipt, supabase } from '../lib/supabase';
 
 type ReceiptDetailsModalProps = {
   isVisible: boolean;
   receipt: Receipt | null;
   onClose: () => void;
+  onDelete?: (receiptId: string) => void;
 };
 
 const getCategoryColor = (category: Receipt['category']) => {
@@ -24,31 +25,83 @@ const getCategoryColor = (category: Receipt['category']) => {
   }
 };
 
-const ReceiptDetailsModal = ({ isVisible, receipt, onClose }: ReceiptDetailsModalProps) => {
+const ReceiptDetailsModal = ({ 
+  isVisible, 
+  receipt, 
+  onClose,
+  onDelete 
+}: ReceiptDetailsModalProps) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   if (!receipt) return null;
 
-  const handleDeletePress = () => {
-    Alert.alert(
-      "Delete Receipt",
-      "Are you sure you want to delete this receipt? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          onPress: () => {
-            console.log("Receipt deleted:", receipt.id);
-            // Here you would call your delete function
-            // After successful deletion, close the modal
-            onClose();
-          },
-          style: "destructive"
+  const deleteReceipt = async () => {
+    try {
+      setIsDeleting(true);
+      console.log("Deleting receipt:", receipt.id);
+      
+      // Delete the receipt from Supabase
+      const { error } = await supabase
+        .from('receipts')
+        .delete()
+        .eq('id', receipt.id);
+        
+      if (error) {
+        console.error("Error deleting receipt:", error);
+        if (Platform.OS === 'web') {
+          window.alert("Failed to delete receipt. Please try again.");
+        } else {
+          Alert.alert("Error", "Failed to delete receipt. Please try again.");
         }
-      ],
-      { cancelable: true }
-    );
+      } else {
+        console.log("Receipt deleted successfully:", receipt.id);
+        setShowDeleteConfirm(false);
+        // Call onDelete callback if provided
+        if (onDelete) {
+          onDelete(receipt.id);
+        }
+        // After successful deletion, close the modal
+        onClose();
+      }
+    } catch (err) {
+      console.error("Exception when deleting receipt:", err);
+      if (Platform.OS === 'web') {
+        window.alert("An unexpected error occurred. Please try again.");
+      } else {
+        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeletePress = () => {
+    console.log("Delete button pressed for receipt:", receipt.id);
+    
+    // Use web alert for browser environment, React Native Alert for mobile
+    if (Platform.OS === 'web') {
+      if (window.confirm("Are you sure you want to delete this receipt? This action cannot be undone.")) {
+        deleteReceipt();
+      }
+    } else {
+      // Use the built-in Alert API for mobile
+      Alert.alert(
+        "Delete Receipt",
+        "Are you sure you want to delete this receipt? This action cannot be undone.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Delete",
+            onPress: deleteReceipt,
+            style: "destructive"
+          }
+        ]
+      );
+    }
   };
 
   return (
@@ -159,8 +212,12 @@ const ReceiptDetailsModal = ({ isVisible, receipt, onClose }: ReceiptDetailsModa
                 className="flex-1 ml-2 py-3 rounded-lg items-center"
                 style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
                 onPress={handleDeletePress}
+                disabled={isDeleting}
+                activeOpacity={0.7}
               >
-                <Text className="font-medium" style={{ color: '#EF4444' }}>Delete Receipt</Text>
+                <Text 
+                className="font-medium" 
+                style={{ color: '#EF4444' }}>{isDeleting ? 'Deleting...' : 'Delete Receipt'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
