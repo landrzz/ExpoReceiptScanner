@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Calendar, Clock, DollarSign, MapPin } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { getReceipts } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
 
@@ -35,6 +36,7 @@ const RecentReceipts = ({
   receipts: propReceipts,
   onReceiptPress = () => {},
 }: RecentReceiptsProps) => {
+  const router = useRouter();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -116,7 +118,7 @@ const RecentReceipts = ({
     <View className="bg-gray-50 p-4 rounded-lg">
       <View className="flex-row justify-between items-center mb-4">
         <Text className="text-lg font-bold">Recent Receipts</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/history")}>
           <Text className="text-blue-500">View All</Text>
         </TouchableOpacity>
       </View>

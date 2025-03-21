@@ -77,7 +77,7 @@ const mockReceipts: Receipt[] = [
     vendor: "Office Depot",
     notes: "Supplies",
     image_url:
-      "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80",
+      "https://images.unsplash.com/photo-1567360425618-824ae1b704d3?w=400&q=80",
     time: "14:20",
     location: "San Francisco, CA",
     created_at: "2023-10-05T14:20:00Z",
@@ -137,7 +137,7 @@ const mockReceipts: Receipt[] = [
     vendor: "Subway",
     notes: "Lunch",
     image_url:
-      "https://images.unsplash.com/photo-1567360425618-1594206637d2?w=400&q=80",
+      "https://images.unsplash.com/photo-1567360425618-824ae1b704d3?w=400&q=80",
     time: "13:25",
     location: "Miami, FL",
     created_at: "2023-09-20T13:25:00Z",
@@ -289,6 +289,21 @@ const HistoryScreen = () => {
               <View
                 className={`w-3 h-3 rounded-full ${categoryColors[item.category as keyof typeof categoryColors]} mr-2`}
               />
+              <Text 
+                className="text-xs font-medium px-2 py-0.5 rounded-full mr-2"
+                style={{ 
+                  backgroundColor: `${item.category === 'FOOD' ? '#FFF7ED' : 
+                                    item.category === 'GAS' ? '#EFF6FF' : 
+                                    item.category === 'TRAVEL' ? '#F5F3FF' : 
+                                    '#F3F4F6'}`,
+                  color: `${item.category === 'FOOD' ? '#F97316' : 
+                          item.category === 'GAS' ? '#3B82F6' : 
+                          item.category === 'TRAVEL' ? '#A855F7' : 
+                          '#6B7280'}`
+                }}
+              >
+                {item.category}
+              </Text>
               <Text className="font-semibold text-gray-800">{item.vendor}</Text>
             </View>
             <Text className="text-gray-500 text-sm mt-1">
