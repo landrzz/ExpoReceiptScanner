@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
-import { BarChart, PieChart } from "lucide-react-native";
+import { View, Text, ActivityIndicator, TouchableOpacity, Dimensions } from "react-native";
+import { BarChart as BarChartIcon, PieChart as PieChartIcon } from "lucide-react-native";
 import { getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
+import { PieChart } from "react-native-chart-kit";
 
 interface CategoryExpense {
   category: "GAS" | "FOOD" | "TRAVEL" | "OTHER";
@@ -32,6 +33,7 @@ const MonthSummary = ({
   const [totalExpense, setTotalExpense] = useState(0);
   const [categoryExpenses, setCategoryExpenses] = useState<CategoryExpense[]>([]);
   const [previousMonthChange, setPreviousMonthChange] = useState<number | null>(null);
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
 
   // Get current month and year if not provided
   const currentDate = new Date();
@@ -156,8 +158,18 @@ const MonthSummary = ({
           {currentMonthName} {currentYear} Summary
         </Text>
         <View className="flex-row items-center">
-          <BarChart className="mr-2" size={20} color="#6366F1" />
-          <PieChart size={20} color="#6366F1" />
+          <TouchableOpacity 
+            onPress={() => setChartType('bar')} 
+            className={`p-1 rounded-md ${chartType === 'bar' ? 'bg-indigo-100' : ''}`}
+          >
+            <BarChartIcon className="mr-2" size={20} color={chartType === 'bar' ? "#4F46E5" : "#6366F1"} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setChartType('pie')} 
+            className={`p-1 rounded-md ${chartType === 'pie' ? 'bg-indigo-100' : ''}`}
+          >
+            <PieChartIcon size={20} color={chartType === 'pie' ? "#4F46E5" : "#6366F1"} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -171,28 +183,85 @@ const MonthSummary = ({
         </View>
       ) : (
         <View className="mb-4">
-          {categoryExpenses
-            .filter(item => item.amount > 0)
-            .sort((a, b) => b.amount - a.amount)
-            .map((item, index) => (
-              <View key={index} className="mb-2">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-700">{item.category}</Text>
-                  <Text className="text-gray-700">
-                    ${item.amount.toFixed(2)} ({getPercentage(item.amount)}%)
-                  </Text>
+          {chartType === 'bar' ? (
+            // Bar chart view
+            categoryExpenses
+              .filter(item => item.amount > 0)
+              .sort((a, b) => b.amount - a.amount)
+              .map((item, index) => (
+                <View key={index} className="mb-2">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-gray-700">{item.category}</Text>
+                    <Text className="text-gray-700">
+                      ${item.amount.toFixed(2)} ({getPercentage(item.amount)}%)
+                    </Text>
+                  </View>
+                  <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <View
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${getPercentage(item.amount)}%`,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  </View>
                 </View>
-                <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <View
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${getPercentage(item.amount)}%`,
-                      backgroundColor: item.color,
-                    }}
-                  />
-                </View>
+              ))
+          ) : (
+            // Pie chart view using react-native-chart-kit
+            <View style={{ width: '100%' }}>
+              <View style={{ width: '100%', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <PieChart
+                  data={categoryExpenses
+                    .filter(item => item.amount > 0)
+                    .map(item => ({
+                      name: item.category,
+                      amount: item.amount,
+                      population: item.amount,
+                      color: item.color,
+                      legendFontColor: "#7F7F7F",
+                      legendFontSize: 12
+                    }))
+                  }
+                  width={Dimensions.get("window").width - 32}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: "#ffffff",
+                    backgroundGradientFrom: "#ffffff",
+                    backgroundGradientTo: "#ffffff",
+                    decimalPlaces: 2,
+                    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    style: {
+                      borderRadius: 16
+                    }
+                  }}
+                  accessor="amount"
+                  backgroundColor="transparent"
+                  paddingLeft="0"
+                  absolute
+                  hasLegend={false}
+                />
               </View>
-            ))}
+              {/* Custom legend for pie chart */}
+              <View className="flex-row flex-wrap justify-center mt-2">
+                {categoryExpenses
+                  .filter(item => item.amount > 0)
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((item, index) => (
+                    <View key={index} className="flex-row items-center mb-2 mx-4">
+                      <View
+                        className="w-3 h-3 rounded-full mr-2"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <Text className="text-xs text-gray-700">
+                        {item.category}: {getPercentage(item.amount)}%
+                      </Text>
+                    </View>
+                  ))}
+              </View>
+            </View>
+          )}
         </View>
       )}
 

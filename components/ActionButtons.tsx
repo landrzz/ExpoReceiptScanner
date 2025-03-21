@@ -19,7 +19,8 @@ const ActionButton = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`${color} p-4 rounded-xl items-center justify-center w-28 h-28 shadow-md`}
+      className={`${color} p-4 rounded-xl items-center justify-center shadow-md`}
+      style={{ flex: 1, margin: 4, minHeight: 112 }} 
       activeOpacity={0.7}
     >
       <View className="items-center">
@@ -58,7 +59,7 @@ const ActionButtons = () => {
       <Text className="text-lg font-bold mb-4 text-gray-800">
         Quick Actions
       </Text>
-      <View className="flex-row justify-between">
+      <View className="flex-row justify-between" style={{ marginHorizontal: -4 }}>
         <ActionButton
           icon={<Camera size={28} color="white" />}
           label="Scan Receipt"

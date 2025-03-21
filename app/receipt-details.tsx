@@ -9,10 +9,12 @@ import {
   SafeAreaView,
   StyleSheet,
   Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin } from "lucide-react-native";
 import { saveReceipt } from "../lib/receipt-service";
+import * as Location from 'expo-location';
 
 const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
 
@@ -24,6 +26,7 @@ export default function ReceiptDetailsScreen() {
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   const handleSave = async () => {
     if (!selectedCategory) {
@@ -52,6 +55,106 @@ export default function ReceiptDetailsScreen() {
     }
   };
 
+  const handleLocationRequest = async () => {
+    setIsLoadingLocation(true);
+    console.log("Location request initiated");
+    
+    try {
+      // Request permission to access location
+      console.log("Requesting location permission...");
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log("Permission status:", status);
+      
+      if (status !== 'granted') {
+        console.log("Permission denied");
+        Alert.alert(
+          "Permission Denied",
+          "Permission to access location was denied. Please enable location services in your device settings to use this feature.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
+      
+      // Get current location
+      console.log("Getting current position...");
+      
+      // Different options for web vs native
+      const locationOptions = Platform.OS === 'web' 
+        ? { 
+            enableHighAccuracy: false,
+            timeout: 20000,
+            maximumAge: 1000,
+          }
+        : {
+            accuracy: Location.Accuracy.Balanced
+          };
+          
+      const currentLocation = await Location.getCurrentPositionAsync(locationOptions);
+      console.log("Location received:", currentLocation);
+      
+      // Get address from coordinates
+      console.log("Reverse geocoding...");
+      const [addressInfo] = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude
+      });
+      
+      console.log("Address info:", addressInfo);
+      
+      // Format address
+      let formattedAddress = '';
+      if (addressInfo) {
+        const addressParts = [
+          addressInfo.name,
+          addressInfo.street,
+          addressInfo.city,
+          addressInfo.region,
+          addressInfo.postalCode,
+          addressInfo.country
+        ].filter(Boolean);
+        
+        formattedAddress = addressParts.join(', ');
+      }
+      
+      // Set the location
+      const locationText = formattedAddress || `${currentLocation.coords.latitude.toFixed(6)}, ${currentLocation.coords.longitude.toFixed(6)}`;
+      console.log("Setting location to:", locationText);
+      setLocation(locationText);
+      
+    } catch (error) {
+      console.error("Error getting location:", error);
+      
+      // More specific error handling for web
+      if (Platform.OS === 'web') {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        if (errorMessage.includes('timeout')) {
+          Alert.alert(
+            "Location Timeout", 
+            "The request to get your location timed out. Please try again or check your browser settings."
+          );
+        } else if (errorMessage.includes('permission')) {
+          Alert.alert(
+            "Permission Issue", 
+            "Your browser is blocking location access. Please check your browser settings and ensure location access is allowed for this site."
+          );
+        } else {
+          Alert.alert(
+            "Location Error", 
+            "Failed to get your location in the browser. Please try again or enter location manually."
+          );
+        }
+      } else {
+        Alert.alert(
+          "Location Error", 
+          "Failed to get your current location. Please try again or enter location manually."
+        );
+      }
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
       <ScrollView className="flex-1 p-4">
@@ -64,7 +167,7 @@ export default function ReceiptDetailsScreen() {
           <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-6">
             {imageUri ? (
               <Image
-                source={{ uri: imageUri }}
+                source={{ uri: imageUri as string }}
                 className="w-full h-64"
                 resizeMode="contain"
               />
@@ -118,14 +221,21 @@ export default function ReceiptDetailsScreen() {
               Location
             </Text>
             <View className="flex-row items-center bg-white rounded-lg overflow-hidden">
-              <View className="p-3">
-                <MapPin size={20} color="#6b7280" />
-              </View>
+              <TouchableOpacity 
+                onPress={handleLocationRequest}
+                disabled={isLoadingLocation}
+                className={`p-3 ${isLoadingLocation ? 'bg-gray-100' : ''}`}
+                accessibilityLabel="Get current location"
+                accessibilityHint="Requests permission to use your current location"
+              >
+                <MapPin size={20} color={isLoadingLocation ? "#9ca3af" : "#6b7280"} />
+              </TouchableOpacity>
               <TextInput
                 className="flex-1 p-3 text-gray-800"
-                placeholder="Add location"
+                placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
                 value={location}
                 onChangeText={setLocation}
+                editable={!isLoadingLocation}
               />
             </View>
           </View>

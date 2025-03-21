@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Calendar,
@@ -311,12 +311,24 @@ const ReportsScreen = () => {
 
               {/* Action Buttons */}
               <View className="flex-row justify-between mb-6">
-                <TouchableOpacity className="bg-blue-500 p-3 rounded-lg flex-row items-center justify-center w-[48%]">
-                  <Download size={20} color="white" className="mr-2" />
+                <TouchableOpacity 
+                  className="bg-blue-500 p-3 rounded-lg flex-row items-center justify-center"
+                  style={{ 
+                    flex: 1, 
+                    marginRight: 4
+                  }}
+                >
+                  <Download size={20} color="white" style={{ marginRight: 8 }} />
                   <Text className="text-white font-medium">Export PDF</Text>
                 </TouchableOpacity>
-                <TouchableOpacity className="bg-gray-200 p-3 rounded-lg flex-row items-center justify-center w-[48%]">
-                  <Share2 size={20} color="#4B5563" className="mr-2" />
+                <TouchableOpacity 
+                  className="bg-gray-200 p-3 rounded-lg flex-row items-center justify-center"
+                  style={{ 
+                    flex: 1, 
+                    marginLeft: 4
+                  }}
+                >
+                  <Share2 size={20} color="#4B5563" style={{ marginRight: 8 }} />
                   <Text className="text-gray-700 font-medium">Share</Text>
                 </TouchableOpacity>
               </View>
