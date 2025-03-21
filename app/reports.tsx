@@ -176,39 +176,6 @@ const ReportsScreen = () => {
         </div>
       `).join('');
     
-    // Create pie chart HTML
-    let pieChartHtml = '';
-    if (reportData.categories.some((c: typeof reportData.categories[0]) => c.percentage > 0)) {
-      pieChartHtml = `
-        <div style="margin-bottom: 30px;">
-          <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-            <div style="background-color: #EBF5FF; border-radius: 50%; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="#3B82F6"/>
-              </svg>
-            </div>
-          </div>
-          <h3 style="text-align: center; font-size: 18px; margin-bottom: 15px;">Expense Distribution</h3>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
-            ${reportData.categories
-              .filter((c: typeof reportData.categories[0]) => c.percentage > 0)
-              .map((category: typeof reportData.categories[0]) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background-color: ${category.color}20; border-radius: 8px;">
-                  <div style="display: flex; align-items: center;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background-color: ${category.color}; margin-right: 8px;"></div>
-                    <span style="font-weight: 500;">${category.name}</span>
-                  </div>
-                  <div style="display: flex; align-items: center;">
-                    <span style="font-weight: 600; margin-right: 8px;">$${category.amount.toFixed(2)}</span>
-                    <span style="background-color: white; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: ${category.color};">${category.percentage}%</span>
-                  </div>
-                </div>
-              `).join('')}
-          </div>
-        </div>
-      `;
-    }
-    
     // Create the HTML content with the html2pdf.js library included
     return `
       <!DOCTYPE html>
@@ -268,8 +235,14 @@ const ReportsScreen = () => {
             </div>
             
             <div class="categories-container">
-              <h2>Expense Distribution</h2>
-              ${pieChartHtml}
+              <h3 style="text-align: center; font-size: 18px; margin-bottom: 15px;">Expense Distribution</h3>
+              <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                <div style="background-color: #EBF5FF; border-radius: 50%; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="#3B82F6"/>
+                  </svg>
+                </div>
+              </div>
               ${categoriesHtml}
             </div>
             
