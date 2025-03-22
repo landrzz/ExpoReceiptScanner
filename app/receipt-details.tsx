@@ -10,10 +10,12 @@ import {
   StyleSheet,
   Alert,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MapPin } from "lucide-react-native";
+import { MapPin, ScanLine } from "lucide-react-native";
 import { saveReceipt, updateReceipt } from "../lib/receipt-service";
+import { extractReceiptInfo } from "../lib/openai-service";
 import * as Location from 'expo-location';
 
 const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
@@ -38,6 +40,7 @@ export default function ReceiptDetailsScreen() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Handle direct edits to form fields
   const updateFormField = (field: string, value: string) => {
@@ -217,6 +220,47 @@ export default function ReceiptDetailsScreen() {
     }
   };
 
+  const handleScanReceipt = async () => {
+    if (!imageUri) {
+      Alert.alert("Error", "No receipt image available to scan");
+      return;
+    }
+    
+    setIsScanning(true);
+    try {
+      const result = await extractReceiptInfo(imageUri);
+      
+      if (result.success && result.data) {
+        // Update form with extracted data
+        const extractedData = result.data;
+        
+        setFormState(prev => ({
+          ...prev,
+          amount: extractedData.amount.toString(),
+          vendor: extractedData.vendor || prev.vendor
+        }));
+        
+        Alert.alert(
+          "Scan Complete", 
+          "Successfully extracted information from your receipt."
+        );
+      } else {
+        Alert.alert(
+          "Scan Failed", 
+          `Could not extract information from the receipt: ${result.error || 'Unknown error'}`
+        );
+      }
+    } catch (error) {
+      console.error("Error scanning receipt:", error);
+      Alert.alert(
+        "Error", 
+        "Failed to scan receipt. Please try again or enter details manually."
+      );
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
       <ScrollView className="flex-1 p-4">
@@ -226,7 +270,7 @@ export default function ReceiptDetailsScreen() {
           </Text>
 
           {/* Image Preview */}
-          <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-6">
+          <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
             {imageUri ? (
               <Image
                 source={{ uri: imageUri }}
@@ -239,6 +283,27 @@ export default function ReceiptDetailsScreen() {
               </View>
             )}
           </View>
+          
+          {/* AI Scan Button - Only show for new receipts with images */}
+          {!isEditing && imageUri && (
+            <TouchableOpacity
+              onPress={handleScanReceipt}
+              disabled={isScanning}
+              className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
+            >
+              {isScanning ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                  <Text className="text-white font-medium">Scanning Receipt...</Text>
+                </>
+              ) : (
+                <>
+                  <ScanLine size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text className="text-white font-medium">Scan Receipt with AI</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Category Selector */}
           <View className="mb-6">
@@ -265,7 +330,7 @@ export default function ReceiptDetailsScreen() {
           {/* Notes Input */}
           <View className="mb-6">
             <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Name / Notes
+              Names / Notes
             </Text>
             <TextInput
               className="bg-white p-4 rounded-lg text-gray-800"

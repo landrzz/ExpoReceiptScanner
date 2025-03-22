@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, View, TouchableOpacity, Dimensions } from "react-native";
+import { Modal, View, TouchableOpacity, Dimensions, Platform } from "react-native";
 import { X } from "lucide-react-native";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, {
@@ -28,6 +28,24 @@ const ImageViewerModal = ({
 
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } =
     Dimensions.get("window");
+
+  // Process the image URI for different platforms
+  const getProcessedImageUri = (uri: string) => {
+    console.log("Modal Image URI:", uri);
+    
+    // For iOS, ensure the URI is properly formatted
+    if (Platform.OS === 'ios') {
+      if (uri.startsWith('file://')) {
+        return uri;
+      } else if (!uri.startsWith('http')) {
+        // If it's a local path without the file:// prefix, add it
+        return `file://${uri}`;
+      }
+    }
+    
+    // For web and Android, use the URI as is
+    return uri;
+  };
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
@@ -99,6 +117,9 @@ const ImageViewerModal = ({
     onClose();
   };
 
+  // Process the image URL
+  const processedUri = getProcessedImageUri(imageUrl);
+
   return (
     <Modal
       visible={isVisible}
@@ -120,10 +141,13 @@ const ImageViewerModal = ({
             style={animatedStyle}
           >
             <Image
-              source={{ uri: imageUrl }}
+              source={{ uri: processedUri }}
               className="w-full h-2/3"
               contentFit="contain"
               transition={200}
+              onError={() => {
+                console.log("Modal image loading error for:", processedUri);
+              }}
             />
           </Animated.View>
         </GestureDetector>

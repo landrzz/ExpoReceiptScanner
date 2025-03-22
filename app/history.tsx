@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  Image,
 } from "react-native";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
   ArrowLeft,
@@ -289,8 +289,7 @@ const HistoryScreen = () => {
               <Image
                 source={getImageSource(item.image_url) || { uri: '' }}
                 className="w-full h-full"
-                contentFit="cover"
-                transition={200}
+                resizeMode="cover"
                 onError={() => {
                   console.log("History image loading error for:", item.image_url);
                 }}
