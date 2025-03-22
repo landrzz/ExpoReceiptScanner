@@ -37,20 +37,68 @@ const AuthForm = () => {
 
     try {
       if (mode === 'login') {
-        const { success, error } = await signInWithEmail(email, password);
-        if (!success && error) {
+        const { success, error, isEmailConfirmationRequired } = await signInWithEmail(email, password);
+        
+        if (isEmailConfirmationRequired) {
+          Alert.alert(
+            'Email Not Confirmed',
+            'Please check your email inbox and confirm your email address before signing in.',
+            [
+              { 
+                text: 'Resend Confirmation', 
+                onPress: () => handleResendConfirmation() 
+              },
+              { text: 'OK' }
+            ]
+          );
+        } else if (!success && error) {
           const authError = error as AuthError;
           Alert.alert('Login Failed', authError.message);
         }
       } else {
-        const { success, error } = await signUpWithEmail(email, password);
+        const { success, error, isEmailConfirmationRequired } = await signUpWithEmail(email, password);
+        
         if (!success && error) {
           const authError = error as AuthError;
           Alert.alert('Registration Failed', authError.message);
         } else if (success) {
-          Alert.alert('Success', 'Registration successful! Please check your email to confirm your account.');
+          if (isEmailConfirmationRequired) {
+            Alert.alert(
+              'Email Confirmation Required',
+              'Registration successful! Please check your email to confirm your account before signing in.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            Alert.alert(
+              'Registration Successful',
+              'Your account has been created successfully.',
+              [{ text: 'OK' }]
+            );
+          }
           setMode('login');
         }
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'An error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    try {
+      setIsLoading(true);
+      // Use the resetPassword function to resend the confirmation email
+      const { success, error } = await resetPassword(email);
+      
+      if (success) {
+        Alert.alert(
+          'Confirmation Email Sent',
+          'We have sent a new confirmation email to your address. Please check your inbox.'
+        );
+      } else if (error) {
+        const authError = error as AuthError;
+        Alert.alert('Error', authError.message);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'An error occurred');
