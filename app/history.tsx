@@ -22,6 +22,7 @@ import { getReceipts, getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
 import ImageViewerModal from "../components/ImageViewerModal";
 import MonthYearPicker from "../components/MonthYearPicker";
+import { getStorageUrl } from "../lib/storage-service";
 
 // Fallback mock data for when API fails
 const mockReceipts: Receipt[] = [
@@ -32,7 +33,7 @@ const mockReceipts: Receipt[] = [
     amount: 24.99,
     vendor: "Burger King",
     notes: "Lunch with team",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1572441420532-e7f6e24e1848?w=400&q=80",
     time: "12:30",
     location: "New York, NY",
@@ -47,7 +48,7 @@ const mockReceipts: Receipt[] = [
     amount: 45.5,
     vendor: "Shell",
     notes: "Full tank",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=400&q=80",
     time: "10:15",
     location: "Boston, MA",
@@ -62,7 +63,7 @@ const mockReceipts: Receipt[] = [
     amount: 125.0,
     vendor: "Uber",
     notes: "Airport trip",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1595953832255-a2ba391cdc78?w=400&q=80",
     time: "08:45",
     location: "Chicago, IL",
@@ -77,7 +78,7 @@ const mockReceipts: Receipt[] = [
     amount: 75.25,
     vendor: "Office Depot",
     notes: "Supplies",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1567360425618-824ae1b704d3?w=400&q=80",
     time: "14:20",
     location: "San Francisco, CA",
@@ -92,7 +93,7 @@ const mockReceipts: Receipt[] = [
     amount: 32.5,
     vendor: "Chipotle",
     notes: "Dinner",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1593538312308-d4c29d8dc7f1?w=400&q=80",
     time: "19:30",
     location: "Los Angeles, CA",
@@ -107,7 +108,7 @@ const mockReceipts: Receipt[] = [
     amount: 42.75,
     vendor: "Exxon",
     notes: "",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1605849285614-e5884d961a49?w=400&q=80",
     time: "16:45",
     location: "Seattle, WA",
@@ -122,7 +123,7 @@ const mockReceipts: Receipt[] = [
     amount: 350.0,
     vendor: "Delta",
     notes: "Baggage fee",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1647427060118-4911c9821b82?w=400&q=80",
     time: "11:10",
     location: "Denver, CO",
@@ -137,7 +138,7 @@ const mockReceipts: Receipt[] = [
     amount: 18.99,
     vendor: "Subway",
     notes: "Lunch",
-    image_url:
+    image_path:
       "https://images.unsplash.com/photo-1567360425618-824ae1b704d3?w=400&q=80",
     time: "13:25",
     location: "Miami, FL",
@@ -247,8 +248,10 @@ const HistoryScreen = () => {
     const isSelected = selectedReceipts.includes(item.id);
 
     const handleImagePress = () => {
-      if (item.image_url) {
-        setSelectedImage(item.image_url);
+      if (item.image_path) {
+        // Get the full image URL from storage
+        const imageUrl = getStorageUrl(item.image_path);
+        setSelectedImage(imageUrl);
         setImageViewerVisible(true);
       }
     };
@@ -257,20 +260,23 @@ const HistoryScreen = () => {
     const getImageSource = (uri: string | null) => {
       if (!uri) return null;
       
+      // Get the storage URL if it's a path
+      const imageUrl = uri.startsWith('http') ? uri : getStorageUrl(uri);
+      
       // Log the image URI for debugging
-      console.log("History Image URI:", uri);
+      console.log("History Image URI:", imageUrl);
       
       // For iOS, ensure the URI is properly formatted
-      if (Platform.OS === 'ios' && uri.startsWith('file://')) {
+      if (Platform.OS === 'ios' && imageUrl.startsWith('file://')) {
         // iOS needs special handling for local file URIs
-        return { uri };
-      } else if (Platform.OS === 'ios' && !uri.startsWith('http')) {
+        return { uri: imageUrl };
+      } else if (Platform.OS === 'ios' && !imageUrl.startsWith('http') && !imageUrl.startsWith('file://')) {
         // If it's a local path without the file:// prefix, add it
-        return { uri: `file://${uri}` };
+        return { uri: `file://${imageUrl}` };
       }
       
       // For web and Android, use the URI as is
-      return { uri };
+      return { uri: imageUrl };
     };
 
     return (
@@ -283,15 +289,15 @@ const HistoryScreen = () => {
           <TouchableOpacity
             onPress={handleImagePress}
             className="w-16 h-16 bg-gray-200 rounded-md mr-3 overflow-hidden"
-            activeOpacity={item.image_url ? 0.7 : 1}
+            activeOpacity={item.image_path ? 0.7 : 1}
           >
-            {item.image_url ? (
+            {item.image_path ? (
               <Image
-                source={getImageSource(item.image_url) || { uri: '' }}
+                source={getImageSource(item.image_path) || { uri: '' }}
                 className="w-full h-full"
                 resizeMode="cover"
                 onError={() => {
-                  console.log("History image loading error for:", item.image_url);
+                  console.log("History image loading error for:", item.image_path);
                 }}
               />
             ) : (

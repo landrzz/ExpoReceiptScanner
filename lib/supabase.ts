@@ -16,7 +16,7 @@ export type Receipt = {
   location: string | null;
   vendor: string | null;
   notes: string | null;
-  image_url: string | null;
+  image_path: string | null; 
   created_at: string;
   updated_at: string;
 };

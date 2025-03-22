@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import "../global.css";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ensureStorageBucketExists } from "../lib/storage-service";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -32,6 +33,21 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Initialize Supabase storage bucket
+  useEffect(() => {
+    const initializeStorage = async () => {
+      try {
+        console.log("Initializing storage bucket...");
+        await ensureStorageBucketExists();
+        console.log("Storage bucket initialization complete");
+      } catch (error) {
+        console.error("Error initializing storage:", error);
+      }
+    };
+
+    initializeStorage();
+  }, []);
 
   if (!loaded) {
     return null;

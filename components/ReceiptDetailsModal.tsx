@@ -3,6 +3,7 @@ import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert, Platform
 import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react-native';
 import { Receipt, supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
+import { getStorageUrl } from '../lib/storage-service';
 
 type ReceiptDetailsModalProps = {
   isVisible: boolean;
@@ -39,6 +40,9 @@ const ReceiptDetailsModal = ({
   const router = useRouter();
   
   if (!receipt) return null;
+
+  // Get the image URL from the storage path
+  const imageUrl = receipt.image_path ? getStorageUrl(receipt.image_path) : null;
 
   const deleteReceipt = async () => {
     try {
@@ -122,7 +126,7 @@ const ReceiptDetailsModal = ({
       pathname: "/receipt-details",
       params: {
         id: receipt.id,
-        imageUri: receipt.image_url,
+        imageUri: imageUrl,
         category: receipt.category,
         notes: receipt.notes || '',
         location: receipt.location || '',
@@ -158,10 +162,10 @@ const ReceiptDetailsModal = ({
           
           <ScrollView className="flex-1 p-5">
             {/* Receipt Image */}
-            {receipt.image_url ? (
+            {imageUrl ? (
               <View className="items-center mb-6">
                 <Image 
-                  source={{ uri: receipt.image_url }} 
+                  source={{ uri: imageUrl }} 
                   className="w-full h-64 rounded-lg"
                   resizeMode="contain"
                 />

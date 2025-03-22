@@ -17,6 +17,7 @@ import { MapPin, ScanLine } from "lucide-react-native";
 import { saveReceipt, updateReceipt } from "../lib/receipt-service";
 import { extractReceiptInfo } from "../lib/openai-service";
 import * as Location from 'expo-location';
+import { getStorageUrl } from "../lib/storage-service";
 
 const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
 
@@ -71,50 +72,48 @@ export default function ReceiptDetailsScreen() {
     }
   }, []);
 
-  const handleSave = async () => {
-    if (!formState.category) {
-      Alert.alert("Error", "Please select a category");
-      return;
-    }
-
-    setIsSubmitting(true);
+  const handleSubmit = async () => {
     try {
+      setIsSubmitting(true);
+      
+      const receiptData: Partial<any> = {
+        category: formState.category,
+        notes: formState.notes,
+        location: formState.location,
+        amount: parseFloat(formState.amount.replace(/,/g, "")),
+        vendor: formState.vendor,
+        date: new Date().toISOString().split("T")[0],
+        time: new Date().toTimeString().split(" ")[0].substring(0, 5),
+      };
+      
+      let result;
+      
       if (isEditing && receiptId) {
         // Update existing receipt
-        console.log("Updating receipt:", receiptId);
-        console.log("Form data:", formState);
-        
-        const { data, error } = await updateReceipt(receiptId, {
-          category: formState.category,
-          notes: formState.notes,
-          location: formState.location,
-          amount: parseFloat(formState.amount) || 0,
-          vendor: formState.vendor
-        });
-
-        if (error) throw error;
-        console.log("Receipt updated successfully", data);
+        result = await updateReceipt(
+          receiptId,
+          receiptData,
+          imageUri // Pass the image URI for updating
+        );
       } else {
-        // Create new receipt
-        console.log("Creating new receipt");
-        const { data, error } = await saveReceipt({
-          imageUri: imageUri,
-          category: formState.category,
-          notes: formState.notes,
-          location: formState.location,
-          amount: parseFloat(formState.amount) || 0,
-          vendor: formState.vendor
-        });
-
-        if (error) throw error;
-        console.log("Receipt created successfully", data);
+        // Save new receipt
+        result = await saveReceipt(receiptData, imageUri);
       }
-
-      // Navigate back to home
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      console.log(`Receipt ${isEditing ? "updated" : "saved"} successfully:`, result.data);
+      
+      // Navigate back to home screen
       router.push("/");
     } catch (error) {
       console.error("Error saving receipt:", error);
-      Alert.alert("Error", "Failed to save receipt. Please try again.");
+      Alert.alert(
+        "Error",
+        `Failed to ${isEditing ? "update" : "save"} receipt. Please try again.`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -220,25 +219,18 @@ export default function ReceiptDetailsScreen() {
     }
   };
 
-  const handleScanReceipt = async () => {
-    if (!imageUri) {
-      Alert.alert("Error", "No receipt image available to scan");
-      return;
-    }
-    
-    setIsScanning(true);
+  const scanWithAI = async (uri: string) => {
     try {
-      const result = await extractReceiptInfo(imageUri);
+      setIsScanning(true);
+      const result = await extractReceiptInfo(uri);
+      console.log("AI Extraction Result:", result);
       
       if (result.success && result.data) {
         // Update form with extracted data
         const extractedData = result.data;
         
-        setFormState(prev => ({
-          ...prev,
-          amount: extractedData.amount.toString(),
-          vendor: extractedData.vendor || prev.vendor
-        }));
+        updateFormField('amount', extractedData.amount.toString());
+        updateFormField('vendor', extractedData.vendor || '');
         
         Alert.alert(
           "Scan Complete", 
@@ -253,11 +245,19 @@ export default function ReceiptDetailsScreen() {
     } catch (error) {
       console.error("Error scanning receipt:", error);
       Alert.alert(
-        "Error", 
-        "Failed to scan receipt. Please try again or enter details manually."
+        "Scanning Error",
+        "Failed to extract details from the receipt image. Please enter details manually."
       );
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  const getDisplayImageUri = (imageUri: string) => {
+    if (imageUri.startsWith('http') || imageUri.startsWith('file://')) {
+      return imageUri;
+    } else {
+      return getStorageUrl(imageUri);
     }
   };
 
@@ -273,7 +273,7 @@ export default function ReceiptDetailsScreen() {
           <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
             {imageUri ? (
               <Image
-                source={{ uri: imageUri }}
+                source={{ uri: getDisplayImageUri(imageUri) }}
                 className="w-full h-64"
                 resizeMode="contain"
               />
@@ -287,7 +287,7 @@ export default function ReceiptDetailsScreen() {
           {/* AI Scan Button - Only show for new receipts with images */}
           {!isEditing && imageUri && (
             <TouchableOpacity
-              onPress={handleScanReceipt}
+              onPress={() => scanWithAI(getDisplayImageUri(imageUri))}
               disabled={isScanning}
               className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
             >
@@ -396,7 +396,7 @@ export default function ReceiptDetailsScreen() {
 
           {/* Save Button */}
           <TouchableOpacity
-            onPress={handleSave}
+            onPress={handleSubmit}
             disabled={isSubmitting}
             className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
           >
