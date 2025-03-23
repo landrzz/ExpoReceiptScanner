@@ -4,14 +4,41 @@ import { uploadImage, deleteImage } from "./storage-service";
 import { DEMO_USER_ID } from "./demo-user";
 
 /**
+ * Get the current user's ID from the session
+ * Falls back to demo user ID for iOS when session retrieval is flaky
+ */
+async function getCurrentUserId() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    
+    if (session && session.user) {
+      console.log("Using authenticated user ID:", session.user.id);
+      return session.user.id;
+    } else {
+      // For iOS compatibility, fall back to demo user ID
+      console.warn("No authenticated user session found, using demo user as fallback");
+      return DEMO_USER_ID;
+    }
+  } catch (error) {
+    console.error("Error getting user ID, using demo user as fallback:", error);
+    return DEMO_USER_ID;
+  }
+}
+
+/**
  * Get all receipts for the current user
  */
 export async function getReceipts() {
   try {
+    const userId = await getCurrentUserId();
+    
+    console.log("Fetching receipts for user:", userId);
+    
     const { data, error } = await supabase
       .from("receipts")
       .select("*")
-      .eq("user_id", DEMO_USER_ID)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -31,6 +58,8 @@ export async function getReceipts() {
  */
 export async function getReceiptsByMonth(month: number, year: number) {
   try {
+    const userId = await getCurrentUserId();
+    
     // Create date range for the month
     const startDate = `${year}-${month.toString().padStart(2, "0")}-01`;
     let endDate;
@@ -42,12 +71,12 @@ export async function getReceiptsByMonth(month: number, year: number) {
       endDate = `${year}-${(month + 1).toString().padStart(2, "0")}-01`;
     }
     
-    console.log(`Fetching receipts from ${startDate} to ${endDate}`);
+    console.log(`Fetching receipts from ${startDate} to ${endDate} for user ${userId}`);
     
     const { data, error } = await supabase
       .from("receipts")
       .select("*")
-      .eq("user_id", DEMO_USER_ID)
+      .eq("user_id", userId)
       .gte("date", startDate)
       .lt("date", endDate)
       .order("date", { ascending: false });
@@ -72,6 +101,8 @@ export async function saveReceipt(
   imageUri: string | null
 ) {
   try {
+    const userId = await getCurrentUserId();
+    
     console.log("Saving receipt with data:", receiptData);
     
     // Handle image upload if provided
@@ -95,7 +126,7 @@ export async function saveReceipt(
     const { data, error } = await supabase.from("receipts").insert({
       ...receiptData,
       image_path: imagePath,
-      user_id: DEMO_USER_ID,
+      user_id: userId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).select();
@@ -128,6 +159,8 @@ export async function updateReceipt(
   newImageUri: string | null
 ) {
   try {
+    const userId = await getCurrentUserId();
+    
     console.log("Updating receipt:", id, "with data:", receiptData);
     
     // First get the current receipt to check if we need to delete an old image
@@ -135,7 +168,7 @@ export async function updateReceipt(
       .from("receipts")
       .select("*")
       .eq("id", id)
-      .eq("user_id", DEMO_USER_ID)
+      .eq("user_id", userId)
       .single();
     
     if (fetchError) {
@@ -177,7 +210,7 @@ export async function updateReceipt(
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .eq("user_id", DEMO_USER_ID)
+      .eq("user_id", userId)
       .select();
 
     if (error) {
@@ -204,12 +237,14 @@ export async function updateReceipt(
  */
 export async function deleteReceipt(id: string) {
   try {
+    const userId = await getCurrentUserId();
+    
     // First get the receipt to get the image path
     const { data: receipt, error: fetchError } = await supabase
       .from("receipts")
       .select("*")
       .eq("id", id)
-      .eq("user_id", DEMO_USER_ID)
+      .eq("user_id", userId)
       .single();
     
     if (fetchError) {
@@ -218,7 +253,7 @@ export async function deleteReceipt(id: string) {
     }
     
     // Delete the receipt record
-    const { error } = await supabase.from("receipts").delete().eq("id", id).eq("user_id", DEMO_USER_ID);
+    const { error } = await supabase.from("receipts").delete().eq("id", id).eq("user_id", userId);
 
     if (error) {
       console.error("Error deleting receipt:", error);
