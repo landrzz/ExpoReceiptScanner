@@ -109,14 +109,19 @@ export const resetPassword = async (email: string) => {
       redirectTo = `${scheme}://reset-password`;
     }
     
+    console.log('Sending password reset email to:', email);
+    console.log('With redirect URL:', redirectTo);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
     
     if (error) {
-      throw error;
+      console.error('Supabase returned error on password reset:', error);
+      return { success: false, error };
     }
     
+    console.log('Password reset email sent successfully');
     return { success: true };
   } catch (error) {
     console.error('Error resetting password:', error);

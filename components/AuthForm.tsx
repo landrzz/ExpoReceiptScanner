@@ -37,9 +37,12 @@ const AuthForm = () => {
 
     try {
       if (mode === 'login') {
-        const { success, error, isEmailConfirmationRequired } = await signInWithEmail(email, password);
+        // Attempt to sign in
+        const result = await signInWithEmail(email, password);
+        console.log('Login attempt result:', result);
         
-        if (isEmailConfirmationRequired) {
+        // Always handle the result, regardless of success/failure
+        if (result.isEmailConfirmationRequired) {
           Alert.alert(
             'Email Not Confirmed',
             'Please check your email inbox and confirm your email address before signing in.',
@@ -51,9 +54,12 @@ const AuthForm = () => {
               { text: 'OK' }
             ]
           );
-        } else if (!success && error) {
-          const authError = error as AuthError;
-          Alert.alert('Login Failed', authError.message);
+        } else if (!result.success) {
+          // Always show an error message for failed login attempts
+          const errorMessage = result.error 
+            ? (result.error as AuthError).message 
+            : 'Invalid email or password. Please try again.';
+          Alert.alert('Login Failed', errorMessage);
         }
       } else {
         const { success, error, isEmailConfirmationRequired } = await signUpWithEmail(email, password);
@@ -116,15 +122,23 @@ const AuthForm = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting to send password reset email to:', email);
       const { success, error } = await resetPassword(email);
+      
       if (!success && error) {
         const authError = error as AuthError;
+        console.error('Password reset failed:', authError.message);
         Alert.alert('Reset Failed', authError.message);
-      } else {
-        Alert.alert('Success', 'Password reset email sent. Please check your inbox.');
-        setMode('login');
+      } else if (success) {
+        console.log('Password reset email sent successfully');
+        Alert.alert(
+          'Password Reset Email Sent',
+          'If an account exists with this email, you will receive instructions to reset your password. Please check your inbox and spam folder.',
+          [{ text: 'OK', onPress: () => setMode('login') }]
+        );
       }
     } catch (error: any) {
+      console.error('Error in handleResetPassword:', error);
       Alert.alert('Error', error.message || 'An error occurred');
     } finally {
       setIsLoading(false);
