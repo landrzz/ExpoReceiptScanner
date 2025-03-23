@@ -8,6 +8,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -16,9 +17,18 @@ export default function ResetPassword() {
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     const query = typeof window !== 'undefined' ? window.location.search : '';
     
+    console.log('Reset password page loaded');
     console.log('URL hash:', hash);
     console.log('URL query:', query);
     console.log('URL params:', params);
+
+    // For local testing, we'll accept a direct token parameter as well
+    const manualToken = params.token || params.access_token;
+    if (manualToken) {
+      console.log('Found manual token parameter:', manualToken);
+      setResetToken(String(manualToken));
+      return;
+    }
 
     // The token might be in different places depending on how Supabase constructs the URL
     // It could be in the hash, query params, or directly in the route params
@@ -35,7 +45,13 @@ export default function ResetPassword() {
         return queryParams.get('access_token');
       }
       
-      // Try to get from route params
+      // Try to get from hash fragment (type=recovery)
+      if (hash.includes('type=recovery')) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        return hashParams.get('access_token');
+      }
+      
+      // Try to get directly from params object
       if (params.access_token) {
         return String(params.access_token);
       }
@@ -45,7 +61,13 @@ export default function ResetPassword() {
 
     const token = extractToken();
     console.log('Extracted token:', token);
-    setResetToken(token);
+    
+    if (!token) {
+      console.error('No reset token found in URL');
+      setTokenError('Could not find a valid reset token in the URL. If you\'re testing locally, you may need to manually provide a token.');
+    } else {
+      setResetToken(token);
+    }
   }, [params]);
 
   const handleResetPassword = async () => {
@@ -67,8 +89,22 @@ export default function ResetPassword() {
     setIsLoading(true);
 
     try {
+      console.log('Attempting to reset password with token');
+      
+      // First, check if we need to use the token to get a session
+      const { data: sessionData, error: sessionError } = await supabase.auth.verifyOtp({
+        token_hash: resetToken,
+        type: 'recovery',
+      });
+      
+      if (sessionError) {
+        console.error('Error verifying token:', sessionError);
+      } else {
+        console.log('Token verification successful:', sessionData);
+      }
+      
       // Update the user's password using the token
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
@@ -76,6 +112,7 @@ export default function ResetPassword() {
         console.error('Error resetting password:', error);
         Alert.alert('Error', error.message);
       } else {
+        console.log('Password update successful:', data);
         Alert.alert(
           'Success',
           'Your password has been reset successfully. You can now log in with your new password.',
@@ -89,6 +126,33 @@ export default function ResetPassword() {
       setIsLoading(false);
     }
   };
+
+  if (tokenError) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Invalid Reset Link</Text>
+        <Text style={styles.message}>
+          {tokenError}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Manually enter reset token for testing"
+          onChangeText={(text) => {
+            if (text.trim()) {
+              setResetToken(text.trim());
+              setTokenError(null);
+            }
+          }}
+        />
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={() => router.replace('/')}
+        >
+          <Text style={styles.buttonText}>Return to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!resetToken) {
     return (

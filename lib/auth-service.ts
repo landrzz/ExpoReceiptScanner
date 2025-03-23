@@ -7,18 +7,25 @@ import Constants from 'expo-constants';
  */
 export const signUpWithEmail = async (email: string, password: string) => {
   try {
+    console.log('Attempting to sign up user with email:', email);
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (error) {
+      console.error('Supabase signup error:', error);
       throw error;
     }
 
+    console.log('Signup response data:', data);
+    
     // Check if email confirmation is required
     const isEmailConfirmationRequired = data.user?.identities?.length === 0 || 
       (data.user && !data.user.confirmed_at);
+      
+    console.log('Email confirmation required?', isEmailConfirmationRequired);
 
     return { 
       user: data.user, 
@@ -36,12 +43,15 @@ export const signUpWithEmail = async (email: string, password: string) => {
  */
 export const signInWithEmail = async (email: string, password: string) => {
   try {
+    console.log('Attempting to sign in user with email:', email);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.error('Supabase signin error:', error);
       // Check if the error is due to email not being confirmed
       if (error.message.includes('Email not confirmed')) {
         return { 
@@ -55,6 +65,7 @@ export const signInWithEmail = async (email: string, password: string) => {
       throw error;
     }
 
+    console.log('Signin successful, user:', data.user?.id);
     return { user: data.user, session: data.session, success: true };
   } catch (error) {
     console.error('Error signing in:', error);
@@ -102,17 +113,20 @@ export const resetPassword = async (email: string) => {
     let redirectTo;
     
     if (Platform.OS === 'web') {
+      // Using absolute URL for web platform with explicit protocol
       redirectTo = `${window.location.origin}/reset-password`;
+      console.log('Web platform detected - reset URL:', redirectTo);
     } else {
       // For mobile, use the app's URL scheme
       const scheme = Constants.expoConfig?.scheme || 'exp';
       redirectTo = `${scheme}://reset-password`;
+      console.log('Mobile platform detected - reset URL:', redirectTo);
     }
     
     console.log('Sending password reset email to:', email);
     console.log('With redirect URL:', redirectTo);
     
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
     
@@ -121,7 +135,7 @@ export const resetPassword = async (email: string) => {
       return { success: false, error };
     }
     
-    console.log('Password reset email sent successfully');
+    console.log('Password reset email sent successfully, response data:', data);
     return { success: true };
   } catch (error) {
     console.error('Error resetting password:', error);
