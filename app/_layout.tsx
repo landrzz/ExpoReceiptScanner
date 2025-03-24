@@ -13,6 +13,7 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ensureStorageBucketExists } from "../lib/storage-service";
 import { AuthProvider } from "../lib/auth-context";
+import { supabase } from "../lib/supabase";
 import AuthGuard from "../components/AuthGuard";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -40,9 +41,17 @@ export default function RootLayout() {
   useEffect(() => {
     const initializeStorage = async () => {
       try {
-        console.log("Initializing storage bucket...");
-        await ensureStorageBucketExists();
-        console.log("Storage bucket initialization complete");
+        // Get the current session
+        const { data } = await supabase.auth.getSession();
+        
+        // Only initialize storage bucket if user is authenticated
+        if (data.session?.user) {
+          console.log("User authenticated, initializing storage bucket...");
+          await ensureStorageBucketExists();
+          console.log("Storage bucket initialization complete");
+        } else {
+          console.log("User not authenticated, skipping storage bucket initialization");
+        }
       } catch (error) {
         console.error("Error initializing storage:", error);
       }

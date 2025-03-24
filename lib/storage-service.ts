@@ -35,6 +35,13 @@ export function getStorageUrl(path: string): string {
  */
 export async function ensureStorageBucketExists(): Promise<void> {
   try {
+    // Check if user is authenticated first
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) {
+      console.log("No authenticated user, skipping bucket creation");
+      return;
+    }
+    
     // Check if the bucket exists
     const { data: buckets, error: bucketsError } = await supabase
       .storage
