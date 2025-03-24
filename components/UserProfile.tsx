@@ -35,7 +35,7 @@ const UserProfile = () => {
 
   return (
     <View className="p-4 bg-white rounded-lg shadow-md">
-      <Text className="text-lg font-bold text-gray-800 mb-2">Profile</Text>
+      <Text className="text-lg font-bold text-gray-800 mb-2">User Profile</Text>
       <Text className="text-gray-600 mb-4">{user.email}</Text>
       <TouchableOpacity
         onPress={handleSignOut}

@@ -16,7 +16,6 @@ import {
   Calendar,
   Filter,
   ChevronDown,
-  Settings,
 } from "lucide-react-native";
 import { getReceipts, getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
@@ -369,14 +368,9 @@ const HistoryScreen = () => {
       <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
         <View className="w-8"></View>
         <Text className="text-xl font-bold">Receipt History</Text>
-        <View className="flex-row">
-          <TouchableOpacity className="p-2 mr-1">
-            <Settings size={22} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity className="p-2">
-            <Filter size={24} color="#000" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity className="p-2">
+          <Filter size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
       {/* Month and Year Selector */}

@@ -3,7 +3,7 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ensureStorageBucketExists } from "../lib/storage-service";
 import { AuthProvider } from "../lib/auth-context";
+import AuthGuard from "../components/AuthGuard";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -58,14 +59,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <ThemeProvider value={DefaultTheme}>
-          <Stack
-            screenOptions={({ route }) => ({
-              headerShown: !route.name.startsWith("tempobook"),
-            })}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="auth" options={{ headerShown: false }} />
-          </Stack>
+          <AuthGuard>
+            <Slot />
+          </AuthGuard>
           <StatusBar style="auto" />
         </ThemeProvider>
       </AuthProvider>

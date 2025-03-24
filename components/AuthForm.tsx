@@ -133,7 +133,7 @@ const AuthForm = () => {
           });
           // Delay redirect slightly to show success message
           setTimeout(() => {
-            router.replace('/');
+            router.push('/');
           }, 1000);
         }
       } else {

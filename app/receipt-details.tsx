@@ -11,6 +11,9 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin, ScanLine } from "lucide-react-native";
@@ -262,150 +265,163 @@ export default function ReceiptDetailsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
-      <ScrollView className="flex-1 p-4">
-        <View className="mb-6">
-          <Text className="text-2xl font-bold text-gray-800 mb-4">
-            {isEditing ? "Edit Receipt" : "Receipt Details"}
-          </Text>
-
-          {/* Image Preview */}
-          <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
-            {imageUri ? (
-              <Image
-                source={{ uri: getDisplayImageUri(imageUri) }}
-                className="w-full h-64"
-                resizeMode="contain"
-              />
-            ) : (
-              <View className="w-full h-64 bg-gray-200 items-center justify-center">
-                <Text className="text-gray-500">No image available</Text>
-              </View>
-            )}
-          </View>
-          
-          {/* AI Scan Button - Only show for new receipts with images */}
-          {!isEditing && imageUri && (
-            <TouchableOpacity
-              onPress={() => scanWithAI(getDisplayImageUri(imageUri))}
-              disabled={isScanning}
-              className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
-            >
-              {isScanning ? (
-                <>
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                  <Text className="text-white font-medium">Scanning Receipt...</Text>
-                </>
-              ) : (
-                <>
-                  <ScanLine size={20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text className="text-white font-medium">Scan Receipt with AI</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Category Selector */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Category
-            </Text>
-            <View className="flex-row flex-wrap justify-between">
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  onPress={() => updateFormField('category', category)}
-                  className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? "bg-blue-500" : "bg-white"}`}
-                >
-                  <Text
-                    className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}
-                  >
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Notes Input */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Names / Notes
-            </Text>
-            <TextInput
-              className="bg-white p-4 rounded-lg text-gray-800"
-              placeholder="Add notes about this receipt"
-              value={formState.notes}
-              onChangeText={(text) => updateFormField('notes', text)}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-          
-          {/* Amount Input */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Amount
-            </Text>
-            <TextInput
-              className="bg-white p-4 rounded-lg text-gray-800"
-              placeholder="Enter amount"
-              value={formState.amount}
-              onChangeText={(text) => updateFormField('amount', text)}
-              keyboardType="numeric"
-            />
-          </View>
-          
-          {/* Vendor Input */}
-          <View className="mb-6">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Vendor
-            </Text>
-            <TextInput
-              className="bg-white p-4 rounded-lg text-gray-800"
-              placeholder="Enter vendor name"
-              value={formState.vendor}
-              onChangeText={(text) => updateFormField('vendor', text)}
-            />
-          </View>
-
-          {/* Location Input */}
-          <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-2">
-              Location
-            </Text>
-            <View className="flex-row items-center bg-white rounded-lg overflow-hidden">
-              <TouchableOpacity 
-                onPress={handleLocationRequest}
-                disabled={isLoadingLocation}
-                className={`p-3 ${isLoadingLocation ? 'bg-gray-100' : ''}`}
-                accessibilityLabel="Get current location"
-                accessibilityHint="Requests permission to use your current location"
-              >
-                <MapPin size={20} color={isLoadingLocation ? "#9ca3af" : "#6b7280"} />
-              </TouchableOpacity>
-              <TextInput
-                className="flex-1 p-3 text-gray-800"
-                placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
-                value={formState.location}
-                onChangeText={(text) => updateFormField('location', text)}
-                editable={!isLoadingLocation}
-              />
-            </View>
-          </View>
-
-          {/* Save Button */}
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <SafeAreaView className="flex-1 bg-gray-100">
+          <ScrollView 
+            className="flex-1 p-4"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding at bottom
           >
-            <Text className="text-white font-bold text-lg">
-              {isSubmitting ? "Saving..." : (isEditing ? "Update Receipt" : "Save Receipt")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+            <View className="mb-6">
+              <Text className="text-2xl font-bold text-gray-800 mb-4">
+                {isEditing ? "Edit Receipt" : "Receipt Details"}
+              </Text>
+
+              {/* Image Preview */}
+              <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
+                {imageUri ? (
+                  <Image
+                    source={{ uri: getDisplayImageUri(imageUri) }}
+                    className="w-full h-64"
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View className="w-full h-64 bg-gray-200 items-center justify-center">
+                    <Text className="text-gray-500">No image available</Text>
+                  </View>
+                )}
+              </View>
+              
+              {/* AI Scan Button - Only show for new receipts with images */}
+              {!isEditing && imageUri && (
+                <TouchableOpacity
+                  onPress={() => scanWithAI(getDisplayImageUri(imageUri))}
+                  disabled={isScanning}
+                  className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
+                >
+                  {isScanning ? (
+                    <>
+                      <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                      <Text className="text-white font-medium">Scanning Receipt...</Text>
+                    </>
+                  ) : (
+                    <>
+                      <ScanLine size={20} color="#fff" style={{ marginRight: 8 }} />
+                      <Text className="text-white font-medium">Scan Receipt with AI</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {/* Category Selector */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">
+                  Category
+                </Text>
+                <View className="flex-row flex-wrap justify-between">
+                  {categories.map((category) => (
+                    <TouchableOpacity
+                      key={category}
+                      onPress={() => updateFormField('category', category)}
+                      className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? "bg-blue-500" : "bg-white"}`}
+                    >
+                      <Text
+                        className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}
+                      >
+                        {category}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Notes Input */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">
+                  Names / Notes
+                </Text>
+                <TextInput
+                  className="bg-white p-4 rounded-lg text-gray-800"
+                  placeholder="Add notes about this receipt"
+                  value={formState.notes}
+                  onChangeText={(text) => updateFormField('notes', text)}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+              
+              {/* Amount Input */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">
+                  Amount
+                </Text>
+                <TextInput
+                  className="bg-white p-4 rounded-lg text-gray-800"
+                  placeholder="Enter amount"
+                  value={formState.amount}
+                  onChangeText={(text) => updateFormField('amount', text)}
+                  keyboardType="numeric"
+                />
+              </View>
+              
+              {/* Vendor Input */}
+              <View className="mb-6">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">
+                  Vendor
+                </Text>
+                <TextInput
+                  className="bg-white p-4 rounded-lg text-gray-800"
+                  placeholder="Enter vendor name"
+                  value={formState.vendor}
+                  onChangeText={(text) => updateFormField('vendor', text)}
+                />
+              </View>
+
+              {/* Location Input */}
+              <View className="mb-8">
+                <Text className="text-lg font-semibold text-gray-800 mb-2">
+                  Location
+                </Text>
+                <View className="flex-row items-center bg-white rounded-lg overflow-hidden">
+                  <TouchableOpacity 
+                    onPress={handleLocationRequest}
+                    disabled={isLoadingLocation}
+                    className={`p-3 ${isLoadingLocation ? 'bg-gray-100' : ''}`}
+                    accessibilityLabel="Get current location"
+                    accessibilityHint="Requests permission to use your current location"
+                  >
+                    <MapPin size={20} color={isLoadingLocation ? "#9ca3af" : "#6b7280"} />
+                  </TouchableOpacity>
+                  <TextInput
+                    className="flex-1 p-3 text-gray-800"
+                    placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
+                    value={formState.location}
+                    onChangeText={(text) => updateFormField('location', text)}
+                    editable={!isLoadingLocation}
+                  />
+                </View>
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+                className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
+              >
+                <Text className="text-white font-bold text-lg">
+                  {isSubmitting ? "Saving..." : (isEditing ? "Update Receipt" : "Save Receipt")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }

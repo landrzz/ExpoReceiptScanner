@@ -2,10 +2,10 @@ import React from "react";
 import { View, Text, ScrollView, SafeAreaView, StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 
-import Header from "../components/Header";
-import ActionButtons from "../components/ActionButtons";
-import RecentReceipts from "../components/RecentReceipts";
-import MonthSummary from "../components/MonthSummary";
+import Header from "../../components/Header";
+import ActionButtons from "../../components/ActionButtons";
+import RecentReceipts from "../../components/RecentReceipts";
+import MonthSummary from "../../components/MonthSummary";
 
 export default function HomeScreen() {
   const router = useRouter();

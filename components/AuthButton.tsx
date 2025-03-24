@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../lib/auth-context';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { User } from 'lucide-react-native';
 import ProfileModal from './ProfileModal';
 
 const AuthButton = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isModalVisible, setModalVisible] = useState(false);
+  
+  // Don't show the button if we're already on the auth screen
+  const isAuthScreen = pathname === '/auth';
 
   const handlePress = async () => {
     if (user) {
@@ -18,6 +22,11 @@ const AuthButton = () => {
       router.push('/auth');
     }
   };
+
+  // Don't render anything if not logged in and already on auth screen
+  if (!user && isAuthScreen) {
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -39,7 +48,7 @@ const AuthButton = () => {
         {user ? (
           <User size={20} color="#4F46E5" />
         ) : (
-          <Text className="text-sm font-medium text-blue-700">Sign In</Text>
+          <Text className="text-sm font-medium text-blue-700">Sign In Now</Text>
         )}
       </TouchableOpacity>
 

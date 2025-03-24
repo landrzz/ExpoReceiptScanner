@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated } from "react-native";
 import { useRouter } from "expo-router";
-import { Camera as CameraIcon } from "lucide-react-native";
+import { Camera as CameraIcon, Zap, ZapOff, RefreshCw } from "lucide-react-native";
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from "expo-file-system";
 
@@ -12,9 +12,19 @@ export default function ScanScreen() {
   const [cameraType, setCameraType] = useState<CameraType>('back');
   const [useFlash, setUseFlash] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
 
   const handleCameraReady = () => {
     setIsCameraReady(true);
+    
+    // Start the fade-out animation after 5 seconds
+    setTimeout(() => {
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 1000, // 1 second fade-out duration
+        useNativeDriver: true,
+      }).start();
+    }, 5000); // 5 seconds delay before starting fade-out
   };
 
   const handleTakePhoto = async () => {
@@ -109,24 +119,31 @@ export default function ScanScreen() {
               onPress={toggleFlash}
               style={styles.controlButton}
             >
-              <Text style={styles.controlText}>
-                {useFlash ? "Flash: ON" : "Flash: OFF"}
-              </Text>
+              {useFlash ? (
+                <Zap size={24} color="#FFFFFF" fill="#FFFFFF" />
+              ) : (
+                <ZapOff size={24} color="#FFFFFF" />
+              )}
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={toggleCameraType}
               style={styles.controlButton}
             >
-              <Text style={styles.controlText}>Flip</Text>
+              <RefreshCw size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
           {/* Overlay text */}
-          <View style={styles.overlayTextContainer}>
+          <Animated.View 
+            style={[
+              styles.overlayTextContainer, 
+              { opacity: overlayOpacity }
+            ]}
+          >
             <Text style={styles.overlayText}>
               Position receipt in frame
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Camera Controls at the bottom */}
           <View style={styles.captureContainer}>
