@@ -22,11 +22,26 @@ export function getStorageUrl(path: string): string {
   
   // Return as-is if it's already a full URL
   if (path.startsWith('http')) {
+    console.log('Using existing URL:', path);
     return path;
   }
   
-  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  try {
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+    console.log('Generated Supabase public URL:', data.publicUrl);
+    
+    // Validate the URL
+    if (!data.publicUrl || !data.publicUrl.startsWith('http')) {
+      console.error('Invalid public URL generated:', data.publicUrl);
+      // Return a fallback URL if the generated URL is invalid
+      return path;
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error generating public URL:', error);
+    return path; // Return the original path as fallback
+  }
 }
 
 /**

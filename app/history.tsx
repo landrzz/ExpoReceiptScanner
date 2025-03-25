@@ -171,6 +171,7 @@ const HistoryScreen = () => {
   const [error, setError] = useState<Error | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
 
   const monthNames = [
     "January",
@@ -251,10 +252,21 @@ const HistoryScreen = () => {
 
     const handleImagePress = () => {
       if (item.image_path) {
-        // Get the full image URL from storage
-        const imageUrl = getStorageUrl(item.image_path);
-        setSelectedImage(imageUrl);
-        setImageViewerVisible(true);
+        try {
+          // Get the full image URL from storage
+          const imageUrl = item.image_path.startsWith('http') ? item.image_path : getStorageUrl(item.image_path);
+          
+          // Log the image URL being sent to the modal
+          console.log("Opening image in modal:", imageUrl);
+          
+          // Set the image URL directly
+          setSelectedImage(imageUrl);
+          setImageViewerVisible(true);
+        } catch (error) {
+          console.error("Error preparing image for modal:", error);
+        }
+      } else {
+        console.log("No image path available for this receipt");
       }
     };
     
@@ -268,16 +280,7 @@ const HistoryScreen = () => {
       // Log the image URI for debugging
       console.log("History Image URI:", imageUrl);
       
-      // For iOS, ensure the URI is properly formatted
-      if (Platform.OS === 'ios' && imageUrl.startsWith('file://')) {
-        // iOS needs special handling for local file URIs
-        return { uri: imageUrl };
-      } else if (Platform.OS === 'ios' && !imageUrl.startsWith('http') && !imageUrl.startsWith('file://')) {
-        // If it's a local path without the file:// prefix, add it
-        return { uri: `file://${imageUrl}` };
-      }
-      
-      // For web and Android, use the URI as is
+      // Return the image source without platform-specific formatting
       return { uri: imageUrl };
     };
 
@@ -294,14 +297,28 @@ const HistoryScreen = () => {
             activeOpacity={item.image_path ? 0.7 : 1}
           >
             {item.image_path ? (
-              <Image
-                source={getImageSource(item.image_path) || { uri: '' }}
-                className="w-full h-full"
-                resizeMode="cover"
-                onError={() => {
-                  console.log("History image loading error for:", item.image_path);
-                }}
-              />
+              <View className="w-full h-full relative">
+                <Image
+                  source={getImageSource(item.image_path) || { uri: '' }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                  onLoadStart={() => {
+                    setLoadingImages(prev => ({ ...prev, [item.id]: true }));
+                  }}
+                  onLoadEnd={() => {
+                    setLoadingImages(prev => ({ ...prev, [item.id]: false }));
+                  }}
+                  onError={() => {
+                    console.log("History image loading error for:", item.image_path);
+                    setLoadingImages(prev => ({ ...prev, [item.id]: false }));
+                  }}
+                />
+                {loadingImages[item.id] && (
+                  <View className="absolute inset-0 flex items-center justify-center bg-gray-200/70">
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  </View>
+                )}
+              </View>
             ) : (
               <View
                 className={`w-full h-full ${categoryColors[item.category as keyof typeof categoryColors]} opacity-30`}

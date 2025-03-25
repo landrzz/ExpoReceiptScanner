@@ -13,12 +13,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Keyboard,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  StatusBar
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { MapPin, ScanLine } from "lucide-react-native";
+import { MapPin, ScanLine, ArrowLeft } from "lucide-react-native";
 import { saveReceipt, updateReceipt } from "../lib/receipt-service";
 import { extractReceiptInfo } from "../lib/openai-service";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from 'expo-location';
 import { getStorageUrl } from "../lib/storage-service";
 
@@ -26,6 +28,7 @@ const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
 
 export default function ReceiptDetailsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   
   // Extract and convert params
@@ -45,6 +48,8 @@ export default function ReceiptDetailsScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [processedImageUri, setProcessedImageUri] = useState<string | null>(null);
 
   // Handle direct edits to form fields
   const updateFormField = (field: string, value: string) => {
@@ -74,6 +79,44 @@ export default function ReceiptDetailsScreen() {
       }
     }
   }, []);
+
+  // Process the image URI when it changes
+  useEffect(() => {
+    if (imageUri) {
+      console.log("Original Image URI:", imageUri);
+      
+      // Process the image URI
+      let finalUri = imageUri;
+      
+      // If editing and the URI is from Supabase storage
+      if (isEditing && !imageUri.startsWith('file://') && !imageUri.startsWith('data:')) {
+        // Make sure we're using the public URL for Supabase storage paths
+        finalUri = getStorageUrl(imageUri);
+        console.log("Processed Image URI for editing:", finalUri);
+      } else if (imageUri.startsWith('file://') || imageUri.startsWith('data:')) {
+        // Local file or data URI, use as is
+        finalUri = imageUri;
+        console.log("Using local image URI:", finalUri);
+      } else {
+        // Any other case, try to get a storage URL
+        finalUri = getStorageUrl(imageUri);
+        console.log("Fallback processed Image URI:", finalUri);
+      }
+      
+      setProcessedImageUri(finalUri);
+      setIsImageLoading(true);
+    } else {
+      setProcessedImageUri(null);
+    }
+  }, [imageUri, isEditing]);
+
+  // Set initial loading state
+  useEffect(() => {
+    if (imageUri) {
+      console.log("Image URI:", imageUri);
+      console.log("Display Image URI:", getDisplayImageUri(imageUri));
+    }
+  }, [imageUri]);
 
   const handleSubmit = async () => {
     try {
@@ -266,6 +309,8 @@ export default function ReceiptDetailsScreen() {
   };
 
   const getDisplayImageUri = (imageUri: string) => {
+    // This function is now mainly used for the AI scanning
+    // For display, we use the processedImageUri state
     if (imageUri.startsWith('http') || imageUri.startsWith('file://')) {
       return imageUri;
     } else {
@@ -280,26 +325,68 @@ export default function ReceiptDetailsScreen() {
       keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView className="flex-1 bg-gray-100">
+        <View className="flex-1 bg-gray-100">
+          <StatusBar barStyle="dark-content" />
+          
+          {/* Header with safe area padding */}
+          <View 
+            className="bg-white border-b border-gray-200 flex-row justify-between items-center"
+            style={{ 
+              paddingTop: Math.max(insets.top, 16), 
+              paddingBottom: 12,
+              paddingHorizontal: 16
+            }}
+          >
+            <TouchableOpacity 
+              onPress={() => router.back()}
+              className="p-3" 
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} 
+              style={{ marginLeft: 4 }}
+            >
+              <ArrowLeft size={24} color="#000" />
+            </TouchableOpacity>
+            <Text className="text-xl font-bold">{isEditing ? "Edit Receipt" : "Receipt Details"}</Text>
+            <View style={{ width: 48 }} /> 
+          </View>
+
           <ScrollView 
             className="flex-1 p-4"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding at bottom
+            contentContainerStyle={{ paddingBottom: 100 }} 
           >
             <View className="mb-6">
-              <Text className="text-2xl font-bold text-gray-800 mb-4">
-                {isEditing ? "Edit Receipt" : "Receipt Details"}
-              </Text>
-
               {/* Image Preview */}
               <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
-                {imageUri ? (
-                  <Image
-                    source={{ uri: getDisplayImageUri(imageUri) }}
-                    className="w-full h-64"
-                    resizeMode="contain"
-                  />
+                {processedImageUri ? (
+                  <View className="w-full h-64 relative">
+                    <Image
+                      source={{ uri: processedImageUri }}
+                      className="w-full h-64"
+                      resizeMode="contain"
+                      onLoadStart={() => {
+                        console.log("Image loading started for:", processedImageUri);
+                        setIsImageLoading(true);
+                      }}
+                      onLoad={() => {
+                        console.log("Image loaded successfully");
+                      }}
+                      onLoadEnd={() => {
+                        console.log("Image loading ended");
+                        setIsImageLoading(false);
+                      }}
+                      onError={(error) => {
+                        console.log("Image loading error for URI:", processedImageUri);
+                        setIsImageLoading(false);
+                      }}
+                    />
+                    {isImageLoading && (
+                      <View className="absolute inset-0 flex items-center justify-center bg-gray-100/80">
+                        <ActivityIndicator size="large" color="#3b82f6" />
+                        <Text className="text-gray-700 font-medium mt-2">Loading image...</Text>
+                      </View>
+                    )}
+                  </View>
                 ) : (
                   <View className="w-full h-64 bg-gray-200 items-center justify-center">
                     <Text className="text-gray-500">No image available</Text>
@@ -310,7 +397,7 @@ export default function ReceiptDetailsScreen() {
               {/* AI Scan Button - Only show for new receipts with images */}
               {!isEditing && imageUri && (
                 <TouchableOpacity
-                  onPress={() => scanWithAI(getDisplayImageUri(imageUri))}
+                  onPress={() => scanWithAI(processedImageUri || imageUri)}
                   disabled={isScanning}
                   className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
                 >
@@ -429,7 +516,7 @@ export default function ReceiptDetailsScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );

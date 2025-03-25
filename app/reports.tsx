@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Dimensions, Alert, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Dimensions, Alert, Platform, StatusBar } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Calendar,
@@ -8,6 +8,7 @@ import {
   Download,
   Share2,
   Printer,
+  ArrowLeft,
 } from "lucide-react-native";
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -15,6 +16,7 @@ import { WebView } from 'react-native-webview';
 import MonthYearPicker from "../components/MonthYearPicker";
 import { getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Add TypeScript declaration for the window.html2pdf global
 declare global {
@@ -25,6 +27,7 @@ declare global {
 
 const ReportsScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState({ 
     month: new Date().getMonth() + 1, 
     year: new Date().getFullYear() 
@@ -434,11 +437,27 @@ const ReportsScreen = () => {
 
   return (
     <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
-        <View className="w-8"></View>
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header with safe area padding */}
+      <View 
+        className="bg-white border-b border-gray-200 flex-row justify-between items-center"
+        style={{ 
+          paddingTop: Math.max(insets.top, 16), 
+          paddingBottom: 12,
+          paddingHorizontal: 16
+        }}
+      >
+        <TouchableOpacity 
+          onPress={() => router.replace('/')}
+          className="p-3" // Increased touch target
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Additional hit area
+          style={{ marginLeft: 4 }}
+        >
+          <ArrowLeft size={24} color="#000" />
+        </TouchableOpacity>
         <Text className="text-xl font-bold">Reports</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 48 }} /> {/* Empty view for balance */}
       </View>
 
       {/* Date Range Selector */}

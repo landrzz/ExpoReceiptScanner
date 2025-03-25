@@ -1,12 +1,11 @@
-import React from "react";
-import { Modal, View, TouchableOpacity, Dimensions, Platform } from "react-native";
+import React, { useState } from "react";
+import { Modal, View, TouchableOpacity, Dimensions, Platform, Image, Text, ActivityIndicator } from "react-native";
 import { X } from "lucide-react-native";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
 } from "react-native-reanimated";
-import { Image } from "expo-image";
 
 interface ImageViewerModalProps {
   isVisible: boolean;
@@ -19,6 +18,10 @@ const ImageViewerModal = ({
   imageUrl,
   onClose,
 }: ImageViewerModalProps) => {
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -33,17 +36,7 @@ const ImageViewerModal = ({
   const getProcessedImageUri = (uri: string) => {
     console.log("Modal Image URI:", uri);
     
-    // For iOS, ensure the URI is properly formatted
-    if (Platform.OS === 'ios') {
-      if (uri.startsWith('file://')) {
-        return uri;
-      } else if (!uri.startsWith('http')) {
-        // If it's a local path without the file:// prefix, add it
-        return `file://${uri}`;
-      }
-    }
-    
-    // For web and Android, use the URI as is
+    // No platform-specific processing needed, just return the URI as is
     return uri;
   };
 
@@ -135,20 +128,48 @@ const ImageViewerModal = ({
           <X size={24} color="white" />
         </TouchableOpacity>
 
+        {/* Debug info */}
+        <Text className="absolute top-20 left-5 text-white text-xs">
+          Image URL: {imageUrl ? imageUrl.substring(0, 30) + '...' : 'none'}
+        </Text>
+
         <GestureDetector gesture={composed}>
           <Animated.View
             className="w-full h-full justify-center items-center"
             style={animatedStyle}
           >
-            <Image
-              source={{ uri: processedUri }}
-              className="w-full h-2/3"
-              contentFit="contain"
-              transition={200}
-              onError={() => {
-                console.log("Modal image loading error for:", processedUri);
-              }}
-            />
+            {imageError ? (
+              <View className="p-4 bg-red-500/50 rounded-lg">
+                <Text className="text-white text-center">Failed to load image</Text>
+                <Text className="text-white text-xs mt-2">{imageError}</Text>
+              </View>
+            ) : (
+              <Image
+                source={{ uri: processedUri }}
+                style={{ width: '100%', height: '66%', resizeMode: 'contain' }}
+                onLoadStart={() => {
+                  setIsLoading(true);
+                  setImageLoaded(false);
+                }}
+                onError={(e) => {
+                  console.log("Modal image loading error:", e.nativeEvent.error);
+                  setImageError(e.nativeEvent.error || 'Unknown error');
+                  setIsLoading(false);
+                }}
+                onLoad={() => {
+                  console.log("Image loaded successfully");
+                  setImageLoaded(true);
+                  setIsLoading(false);
+                }}
+              />
+            )}
+            
+            {isLoading && !imageError && (
+              <View className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
+                <ActivityIndicator size="large" color="#ffffff" />
+                <Text className="text-white mt-4 font-medium">Loading image...</Text>
+              </View>
+            )}
           </Animated.View>
         </GestureDetector>
       </View>

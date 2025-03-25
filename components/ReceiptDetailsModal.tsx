@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Image, ScrollView, Alert, Platform, ActivityIndicator } from 'react-native';
 import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react-native';
 import { Receipt, supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
@@ -37,6 +37,7 @@ const ReceiptDetailsModal = ({
 }: ReceiptDetailsModalProps) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
   const router = useRouter();
   
   if (!receipt) return null;
@@ -164,11 +165,34 @@ const ReceiptDetailsModal = ({
             {/* Receipt Image */}
             {imageUrl ? (
               <View className="items-center mb-6">
-                <Image 
-                  source={{ uri: imageUrl }} 
-                  className="w-full h-64 rounded-lg"
-                  resizeMode="contain"
-                />
+                <View className="w-full h-64 relative">
+                  <Image 
+                    source={{ uri: imageUrl }} 
+                    className="w-full h-64 rounded-lg"
+                    resizeMode="contain"
+                    onLoadStart={() => {
+                      console.log("Modal image loading started");
+                      setIsImageLoading(true);
+                    }}
+                    onLoad={() => {
+                      console.log("Modal image loaded successfully");
+                    }}
+                    onLoadEnd={() => {
+                      console.log("Modal image loading ended");
+                      setIsImageLoading(false);
+                    }}
+                    onError={(error) => {
+                      console.log("Modal image loading error");
+                      setIsImageLoading(false);
+                    }}
+                  />
+                  {isImageLoading && (
+                    <View className="absolute inset-0 flex items-center justify-center bg-gray-100/80 rounded-lg">
+                      <ActivityIndicator size="large" color="#3b82f6" />
+                      <Text className="text-gray-700 font-medium mt-2">Loading image...</Text>
+                    </View>
+                  )}
+                </View>
               </View>
             ) : (
               <View className="items-center justify-center mb-6 bg-gray-100 w-full h-64 rounded-lg">

@@ -126,11 +126,11 @@ const AuthForm = () => {
           });
         } else {
           console.log('Login successful, redirecting...');
-          showFeedback({
-            type: 'success',
-            title: 'Login Successful',
-            message: 'You are now signed in.'
-          });
+          // showFeedback({
+          //   type: 'success',
+          //   title: 'Login Successful',
+          //   message: 'You are now signed in.'
+          // });
           // Delay redirect slightly to show success message
           setTimeout(() => {
             router.push('/');
