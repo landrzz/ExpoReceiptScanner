@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { getSession } from './auth-service';
+import { getSession, ensureUserProfileExists } from './auth-service';
 
 type AuthContextType = {
   user: User | null;
@@ -29,6 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { session: currentSession } = await getSession();
       setSession(currentSession);
       setUser(currentSession?.user || null);
+      
+      // Ensure user profile exists if we have a session
+      if (currentSession?.user) {
+        await ensureUserProfileExists(
+          currentSession.user.id, 
+          currentSession.user.email
+        );
+      }
+      
       setIsLoading(false);
     };
 
@@ -39,6 +48,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user || null);
+        
+        // Ensure user profile exists when auth state changes
+        if (newSession?.user) {
+          await ensureUserProfileExists(
+            newSession.user.id,
+            newSession.user.email
+          );
+        }
+        
         setIsLoading(false);
       }
     );

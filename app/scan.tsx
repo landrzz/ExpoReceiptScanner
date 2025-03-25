@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { Camera as CameraIcon, Zap, ZapOff, RefreshCw, ArrowLeft } from "lucide-react-native";
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
@@ -13,6 +13,7 @@ export default function ScanScreen() {
   const [useFlash, setUseFlash] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   const handleCameraReady = () => {
     setIsCameraReady(true);
@@ -28,21 +29,88 @@ export default function ScanScreen() {
   };
 
   const handleTakePhoto = async () => {
-    if (cameraRef.current && isCameraReady) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-        });
-        
-        if (!photo || !photo.uri) {
-          throw new Error("Failed to capture image");
+    if (!isCameraReady) {
+      Alert.alert("Camera not ready", "Please wait until the camera is ready.");
+      return;
+    }
+
+    try {
+      let photo;
+      
+      if (Platform.OS === 'web') {
+        // Web-specific implementation
+        if (cameraRef.current) {
+          const webCameraView = cameraRef.current as any;
+          
+          // Access the underlying video element and canvas
+          const video = webCameraView._videoRef?.current;
+          if (!video) {
+            throw new Error("Video element not found");
+          }
+          
+          // Create a canvas to capture the image
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          // Draw the current video frame to the canvas
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error("Failed to get canvas context");
+          }
+          
+          // Flip horizontally if using front camera
+          if (cameraType === 'front') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+          }
+          
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          // Get the image as a data URL
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          // Create a photo object similar to what takePictureAsync returns
+          photo = {
+            uri: dataUrl,
+            width: canvas.width,
+            height: canvas.height
+          };
+        } else {
+          throw new Error("Camera reference not available");
         }
+      } else {
+        // Native implementation (iOS, Android)
+        if (cameraRef.current) {
+          photo = await cameraRef.current.takePictureAsync({
+            quality: 0.8,
+          });
+        } else {
+          throw new Error("Camera reference not available");
+        }
+      }
+      
+      if (!photo || !photo.uri) {
+        throw new Error("Failed to capture image");
+      }
+      
+      // Create a unique filename
+      const timestamp = new Date().getTime();
+      const newUri = `${FileSystem.documentDirectory}receipt_${timestamp}.jpg`;
+      
+      // For web, we need to handle the image differently
+      if (Platform.OS === 'web') {
+        // On web, we can use the data URL directly or convert it to a blob
+        // For simplicity, we'll just use the data URL
+        setCapturedImage(photo.uri);
         
-        // Create a unique filename
-        const timestamp = new Date().getTime();
-        const newUri = `${FileSystem.documentDirectory}receipt_${timestamp}.jpg`;
-        
-        // Copy the file to a persistent location
+        // Navigate to receipt details with the image URI
+        router.push({
+          pathname: "/receipt-details",
+          params: { imageUri: photo.uri },
+        });
+      } else {
+        // Copy the file to a persistent location (for native platforms)
         await FileSystem.copyAsync({
           from: photo.uri,
           to: newUri
@@ -53,12 +121,10 @@ export default function ScanScreen() {
           pathname: "/receipt-details",
           params: { imageUri: newUri },
         });
-      } catch (error) {
-        console.error("Error taking picture:", error);
-        Alert.alert("Error", "Failed to capture image. Please try again.");
       }
-    } else {
-      Alert.alert("Camera not ready", "Please wait until the camera is ready.");
+    } catch (error) {
+      console.error("Error taking picture:", error);
+      Alert.alert("Error", "Failed to capture image. Please try again.");
     }
   };
 

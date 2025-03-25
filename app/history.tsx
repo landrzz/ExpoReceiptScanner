@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   Image,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -22,6 +23,7 @@ import { Receipt } from "../lib/supabase";
 import ImageViewerModal from "../components/ImageViewerModal";
 import MonthYearPicker from "../components/MonthYearPicker";
 import { getStorageUrl } from "../lib/storage-service";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Fallback mock data for when API fails
 const mockReceipts: Receipt[] = [
@@ -157,6 +159,7 @@ const categoryColors = {
 
 const HistoryScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -364,16 +367,30 @@ const HistoryScreen = () => {
         />
       )}
 
-      {/* Header */}
-      <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
+      <StatusBar barStyle="dark-content" />
+      
+      {/* Header with safe area padding */}
+      <View 
+        className="bg-white border-b border-gray-200 flex-row justify-between items-center"
+        style={{ 
+          paddingTop: Math.max(insets.top, 16), 
+          paddingBottom: 12,
+          paddingHorizontal: 16
+        }}
+      >
         <TouchableOpacity 
           onPress={() => router.replace('/')}
-          className="p-2"
+          className="p-3" // Increased touch target
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Additional hit area
+          style={{ marginLeft: 4 }}
         >
           <ArrowLeft size={24} color="#000" />
         </TouchableOpacity>
         <Text className="text-xl font-bold">Receipt History</Text>
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity 
+          className="p-3" // Increased touch target
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Additional hit area
+        >
           <Filter size={24} color="#000" />
         </TouchableOpacity>
       </View>

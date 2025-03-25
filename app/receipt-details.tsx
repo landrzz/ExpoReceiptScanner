@@ -35,7 +35,7 @@ export default function ReceiptDetailsScreen() {
   
   // Form state
   const [formState, setFormState] = useState({
-    category: '',
+    category: 'OTHER', // Set a default category
     notes: '',
     location: '',
     amount: '0',
@@ -62,7 +62,7 @@ export default function ReceiptDetailsScreen() {
     if (isEditing) {
       try {
         setFormState({
-          category: String(params.category || ''),
+          category: String(params.category || 'OTHER'), // Set default category if not provided
           notes: String(params.notes || ''),
           location: String(params.location || ''),
           amount: String(params.amount || '0'),
@@ -77,6 +77,15 @@ export default function ReceiptDetailsScreen() {
 
   const handleSubmit = async () => {
     try {
+      // Validate category before submission
+      if (!formState.category || !categories.includes(formState.category)) {
+        Alert.alert(
+          "Invalid Category",
+          "Please select a valid category for this receipt."
+        );
+        return;
+      }
+      
       setIsSubmitting(true);
       
       const receiptData: Partial<any> = {

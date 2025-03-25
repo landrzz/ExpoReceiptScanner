@@ -27,6 +27,11 @@ export const signUpWithEmail = async (email: string, password: string) => {
       
     console.log('Email confirmation required?', isEmailConfirmationRequired);
 
+    // Create user profile if user was created
+    if (data.user && data.user.id) {
+      await ensureUserProfileExists(data.user.id, email);
+    }
+
     return { 
       user: data.user, 
       success: true, 
@@ -66,6 +71,12 @@ export const signInWithEmail = async (email: string, password: string) => {
     }
 
     console.log('Signin successful, user:', data.user?.id);
+    
+    // Ensure user profile exists on sign in as well
+    if (data.user && data.user.id) {
+      await ensureUserProfileExists(data.user.id, email);
+    }
+
     return { user: data.user, session: data.session, success: true };
   } catch (error) {
     console.error('Error signing in:', error);
@@ -139,6 +150,44 @@ export const resetPassword = async (email: string) => {
     return { success: true };
   } catch (error) {
     console.error('Error resetting password:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Creates or updates a user record in the public.users table
+ * This is necessary because the receipts table has a foreign key to public.users
+ */
+export const ensureUserProfileExists = async (userId: string, email?: string) => {
+  try {
+    if (!userId) {
+      console.error('Cannot create user profile: No user ID provided');
+      return { success: false, error: 'No user ID provided' };
+    }
+    
+    console.log('Ensuring user profile exists for user:', userId);
+    
+    // Use upsert to either create a new record or update an existing one
+    const { data, error } = await supabase
+      .from('users')
+      .upsert(
+        { 
+          id: userId,
+          email: email,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'id' }
+      );
+    
+    if (error) {
+      console.error('Error creating user profile:', error);
+      return { success: false, error };
+    }
+    
+    console.log('User profile created/updated successfully');
+    return { success: true, data };
+  } catch (error) {
+    console.error('Exception creating user profile:', error);
     return { success: false, error };
   }
 };

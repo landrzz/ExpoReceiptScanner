@@ -5,7 +5,7 @@ import { DEMO_USER_ID } from "./demo-user";
 
 /**
  * Get the current user's ID from the session
- * Falls back to demo user ID for iOS when session retrieval is flaky
+ * Throws an error if no authenticated user is found
  */
 async function getCurrentUserId() {
   try {
@@ -16,13 +16,14 @@ async function getCurrentUserId() {
       console.log("Using authenticated user ID:", session.user.id);
       return session.user.id;
     } else {
-      // For iOS compatibility, fall back to demo user ID
-      console.warn("No authenticated user session found, using demo user as fallback");
-      return DEMO_USER_ID;
+      // Instead of falling back to demo user, throw an error
+      const error = new Error("No authenticated user found. Please log in before performing this action.");
+      console.error(error);
+      throw error;
     }
   } catch (error) {
-    console.error("Error getting user ID, using demo user as fallback:", error);
-    return DEMO_USER_ID;
+    console.error("Error getting user ID:", error);
+    throw error;
   }
 }
 

@@ -30,7 +30,7 @@ export function getStorageUrl(path: string): string {
 }
 
 /**
- * Create the storage bucket and set permissions if it doesn't exist
+ * Check if the storage bucket exists
  * This should be called when the app starts
  */
 export async function ensureStorageBucketExists(): Promise<void> {
@@ -38,7 +38,7 @@ export async function ensureStorageBucketExists(): Promise<void> {
     // Check if user is authenticated first
     const { data } = await supabase.auth.getSession();
     if (!data.session?.user) {
-      console.log("No authenticated user, skipping bucket creation");
+      console.log("User not authenticated, skipping bucket initialization");
       return;
     }
     
@@ -55,21 +55,15 @@ export async function ensureStorageBucketExists(): Promise<void> {
     const bucketExists = buckets?.some(bucket => bucket.name === STORAGE_BUCKET);
     
     if (!bucketExists) {
-      // Create the bucket if it doesn't exist
-      const { error: createError } = await supabase
-        .storage
-        .createBucket(STORAGE_BUCKET, {
-          public: true, // Make the bucket public
-        });
-      
-      if (createError) {
-        console.error("Error creating bucket:", createError);
-      } else {
-        console.log(`Storage bucket '${STORAGE_BUCKET}' created successfully`);
-      }
+      // Instead of trying to create the bucket (which fails due to RLS policies),
+      // just log that it doesn't exist. The bucket should be created manually
+      // in the Supabase dashboard.
+      console.log(`Storage bucket '${STORAGE_BUCKET}' does not exist. Using it anyway.`);
+    } else {
+      console.log(`Storage bucket '${STORAGE_BUCKET}' exists.`);
     }
   } catch (error) {
-    console.error("Error ensuring bucket exists:", error);
+    console.error("Error checking if bucket exists:", error);
   }
 }
 
@@ -87,13 +81,20 @@ export async function uploadImage(imageUri: string): Promise<{path: string|null,
     // Ensure the storage bucket exists
     await ensureStorageBucketExists();
 
+    // Get the current user ID
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) {
+      throw new Error("No authenticated user found. Please log in before uploading images.");
+    }
+    const userId = data.session.user.id;
+
     // Format the URI properly
     const formattedUri = formatImageUri(imageUri);
     
     // Generate a unique file name
     const timestamp = new Date().getTime();
     const fileExt = formattedUri.split('.').pop() || 'jpg';
-    const fileName = `${DEMO_USER_ID}/receipt_${timestamp}.${fileExt}`;
+    const fileName = `${userId}/receipt_${timestamp}.${fileExt}`;
     
     // Read the file as base64
     const fileInfo = await FileSystem.getInfoAsync(formattedUri);
@@ -107,7 +108,7 @@ export async function uploadImage(imageUri: string): Promise<{path: string|null,
     });
     
     // Upload the image
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(fileName, decode(base64), {
         contentType: `image/${fileExt}`,
@@ -119,8 +120,8 @@ export async function uploadImage(imageUri: string): Promise<{path: string|null,
       throw error;
     }
     
-    console.log("Image uploaded successfully:", data.path);
-    return { path: data.path, error: null };
+    console.log("Image uploaded successfully:", uploadData.path);
+    return { path: uploadData.path, error: null };
   } catch (error) {
     console.error("Error uploading image:", error);
     return { path: null, error };
