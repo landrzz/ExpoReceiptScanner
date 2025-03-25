@@ -643,12 +643,23 @@ const ReportsScreen = () => {
           animationType="slide"
         >
           <View className="flex-1 bg-white">
-            <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
-              <TouchableOpacity onPress={() => setShowWebView(false)}>
-                <Text className="text-blue-500">Close</Text>
+            <View 
+              className="bg-white border-b border-gray-200 flex-row justify-between items-center"
+              style={{ 
+                paddingTop: Math.max(insets.top, 16), 
+                paddingBottom: 12,
+                paddingHorizontal: 16
+              }}
+            >
+              <TouchableOpacity 
+                onPress={() => setShowWebView(false)}
+                className="p-3" 
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              >
+                <ArrowLeft size={24} color="#000" />
               </TouchableOpacity>
               <Text className="text-xl font-bold">Expense Report</Text>
-              <View style={{ width: 50 }} />
+              <View style={{ width: 48 }} />
             </View>
             
             {/* Action buttons for PDF */}
@@ -778,30 +789,31 @@ const ReportsScreen = () => {
             
             {Platform.OS === 'web' ? (
               <View className="flex-1">
-                <iframe
-                  srcDoc={htmlContent}
+                <WebView
+                  source={{ html: htmlContent }}
                   style={{
                     width: '100%',
                     height: '100%',
-                    border: 'none',
                   }}
                 />
               </View>
             ) : (
-              <WebView
-                ref={webViewRef}
-                source={{ html: htmlContent, baseUrl: '' }}
-                onMessage={handleWebViewMessage}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                renderLoading={() => (
-                  <View className="absolute inset-0 justify-center items-center bg-white">
-                    <ActivityIndicator size="large" color="#3B82F6" />
-                    <Text className="mt-4 text-gray-500">Generating report...</Text>
-                  </View>
-                )}
-              />
+              <>
+                <WebView
+                  ref={webViewRef}
+                  source={{ html: htmlContent, baseUrl: '' }}
+                  onMessage={handleWebViewMessage}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  startInLoadingState={true}
+                  renderLoading={() => (
+                    <View className="absolute inset-0 justify-center items-center bg-white">
+                      <ActivityIndicator size="large" color="#3B82F6" />
+                      <Text className="mt-4 text-gray-500">Generating report...</Text>
+                    </View>
+                  )}
+                />
+              </>
             )}
           </View>
         </Modal>
