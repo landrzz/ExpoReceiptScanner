@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated } from "react-native";
 import { useRouter } from "expo-router";
-import { Camera as CameraIcon, Zap, ZapOff, RefreshCw } from "lucide-react-native";
+import { Camera as CameraIcon, Zap, ZapOff, RefreshCw, ArrowLeft } from "lucide-react-native";
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from "expo-file-system";
 
@@ -116,21 +116,29 @@ export default function ScanScreen() {
           {/* Camera Controls at the top */}
           <View style={styles.controlsRow}>
             <TouchableOpacity 
-              onPress={toggleFlash}
-              style={styles.controlButton}
+              onPress={() => router.back()}
+              style={styles.backButton}
             >
-              {useFlash ? (
-                <Zap size={24} color="#FFFFFF" fill="#FFFFFF" />
-              ) : (
-                <ZapOff size={24} color="#FFFFFF" />
-              )}
+              <ArrowLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={toggleCameraType}
-              style={styles.controlButton}
-            >
-              <RefreshCw size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={styles.rightControls}>
+              <TouchableOpacity 
+                onPress={toggleFlash}
+                style={styles.controlButton}
+              >
+                {useFlash ? (
+                  <Zap size={24} color="#FFFFFF" fill="#FFFFFF" />
+                ) : (
+                  <ZapOff size={24} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={toggleCameraType}
+                style={styles.controlButton}
+              >
+                <RefreshCw size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Overlay text */}
@@ -207,18 +215,30 @@ const styles = StyleSheet.create({
   },
   controlsRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    padding: 16,
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+  },
+  rightControls: {
+    flexDirection: "row",
   },
   controlButton: {
-    backgroundColor: "rgba(0,0,0,0.5)",
+    marginLeft: 16,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    padding: 12,
-    marginLeft: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  controlText: {
-    color: "#fff",
-    fontSize: 12,
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   overlayTextContainer: {
     position: "absolute",

@@ -366,7 +366,12 @@ const HistoryScreen = () => {
 
       {/* Header */}
       <View className="bg-white p-4 border-b border-gray-200 flex-row justify-between items-center">
-        <View className="w-8"></View>
+        <TouchableOpacity 
+          onPress={() => router.replace('/')}
+          className="p-2"
+        >
+          <ArrowLeft size={24} color="#000" />
+        </TouchableOpacity>
         <Text className="text-xl font-bold">Receipt History</Text>
         <TouchableOpacity className="p-2">
           <Filter size={24} color="#000" />
