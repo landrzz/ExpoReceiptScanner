@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Dimensions, Alert, Platform, StatusBar } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Dimensions, Alert, Platform, StatusBar, LogBox } from "react-native";
 import { useRouter } from "expo-router";
 import {
   Calendar,
@@ -16,6 +16,7 @@ import { WebView } from 'react-native-webview';
 import MonthYearPicker from "../components/MonthYearPicker";
 import { getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
+import { getStorageUrl } from "../lib/storage-service";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Add TypeScript declaration for the window.html2pdf global
@@ -24,6 +25,9 @@ declare global {
     html2pdf: any;
   }
 }
+
+// Suppress specific warnings
+LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
 
 const ReportsScreen = () => {
   const router = useRouter();
@@ -142,9 +146,21 @@ const ReportsScreen = () => {
     
     // Create receipts HTML
     const receiptsHtml = receipts.map((receipt: Receipt) => {
-      const imageHtml = receipt.image_url 
-        ? `<div style="flex: 1;"><img src="${receipt.image_url}" style="width: 150px; height: auto; border-radius: 8px;" crossorigin="anonymous" /></div>` 
-        : `<div style="flex: 1; width: 150px; height: 150px; background-color: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><p style="color: #9ca3af;">No Image</p></div>`;
+      // Get the full Supabase URL for the image
+      const imageUrl = receipt.image_path ? getStorageUrl(receipt.image_path) : '';
+      console.log('Report image URL:', imageUrl);
+      
+      // Create image HTML with better error handling and loading indicators
+      const imageHtml = imageUrl 
+        ? `<div style="flex: 1; min-height: 200px; position: relative;">
+            <img 
+              src="${imageUrl}" 
+              style="width: 250px; height: auto; max-height: 300px; border-radius: 8px; object-fit: cover;" 
+              crossorigin="anonymous" 
+              onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div style=\\'width: 250px; height: 200px; background-color: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;\\'><p style=\\'color: #ef4444; text-align: center;\\'>Image failed to load</p></div>';" 
+            />
+          </div>` 
+        : `<div style="flex: 1; width: 250px; height: 200px; background-color: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><p style="color: #9ca3af;">No Image</p></div>`;
       
       return `
         <div style="display: flex; flex-direction: row; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; background-color: white;">
@@ -186,6 +202,7 @@ const ReportsScreen = () => {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="Content-Security-Policy" content="default-src * 'self' data: gap: 'unsafe-inline' 'unsafe-eval' https://jfbazvfmbvoufpewlwge.supabase.co https://*.supabase.co https://cdnjs.cloudflare.com; img-src * 'self' data: blob: https://*.supabase.co;">
           <title>Expense Report - ${formattedDate}</title>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
           <style>
@@ -795,16 +812,30 @@ const ReportsScreen = () => {
                     width: '100%',
                     height: '100%',
                   }}
+                  originWhitelist={['*']}
+                  mixedContentMode="always"
+                  allowsFullscreenVideo={true}
+                  allowFileAccess={true}
+                  allowUniversalAccessFromFileURLs={true}
+                  allowFileAccessFromFileURLs={true}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
                 />
               </View>
             ) : (
               <>
                 <WebView
                   ref={webViewRef}
-                  source={{ html: htmlContent, baseUrl: '' }}
+                  source={{ html: htmlContent, baseUrl: 'https://jfbazvfmbvoufpewlwge.supabase.co' }}
                   onMessage={handleWebViewMessage}
                   javaScriptEnabled={true}
                   domStorageEnabled={true}
+                  originWhitelist={['*']}
+                  mixedContentMode="always"
+                  allowsFullscreenVideo={true}
+                  allowFileAccess={true}
+                  allowUniversalAccessFromFileURLs={true}
+                  allowFileAccessFromFileURLs={true}
                   startInLoadingState={true}
                   renderLoading={() => (
                     <View className="absolute inset-0 justify-center items-center bg-white">
@@ -812,6 +843,10 @@ const ReportsScreen = () => {
                       <Text className="mt-4 text-gray-500">Generating report...</Text>
                     </View>
                   )}
+                  onError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('WebView error:', nativeEvent);
+                  }}
                 />
               </>
             )}

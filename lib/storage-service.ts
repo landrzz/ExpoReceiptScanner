@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system";
 import { decode } from "base64-arraybuffer";
 import { DEMO_USER_ID } from "./demo-user";
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const STORAGE_BUCKET = "receipt_images";
 
@@ -12,6 +13,69 @@ export function formatImageUri(uri: string): string {
     return `file://${uri}`;
   }
   return uri;
+}
+
+/**
+ * Compress an image to reduce file size
+ * @param {string} imageUri - Local URI of the image
+ * @returns {Promise<string>} URI of the compressed image
+ */
+export async function compressImage(imageUri: string): Promise<string> {
+  try {
+    if (!imageUri) {
+      throw new Error("No image URI provided for compression");
+    }
+
+    // Format the URI properly
+    const formattedUri = formatImageUri(imageUri);
+    
+    // Skip compression for web data URLs
+    if (Platform.OS === 'web' && imageUri.startsWith('data:')) {
+      console.log("Skipping compression for web data URL");
+      return imageUri;
+    }
+
+    // Get original file info to log size reduction
+    let originalSize = 0;
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(formattedUri);
+      if (fileInfo.exists && 'size' in fileInfo) {
+        originalSize = fileInfo.size;
+        console.log(`Original image size: ${(originalSize / 1024 / 1024).toFixed(2)} MB`);
+      }
+    } catch (error) {
+      console.log("Could not get original file size", error);
+    }
+
+    // Compress the image
+    const compressedImage = await ImageManipulator.manipulateAsync(
+      formattedUri,
+      [{ resize: { width: 1200 } }], // Resize to max width of 1200px
+      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG } // 50% compression, JPEG format
+    );
+
+    // Log size reduction if possible
+    try {
+      if (compressedImage.uri) {
+        const compressedInfo = await FileSystem.getInfoAsync(compressedImage.uri);
+        if (compressedInfo.exists && 'size' in compressedInfo) {
+          const compressedSize = compressedInfo.size;
+          console.log(`Compressed image size: ${(compressedSize / 1024 / 1024).toFixed(2)} MB`);
+          if (originalSize > 0) {
+            console.log(`Size reduction: ${((1 - compressedSize / originalSize) * 100).toFixed(2)}%`);
+          }
+        }
+      }
+    } catch (error) {
+      console.log("Could not get compressed file size", error);
+    }
+
+    return compressedImage.uri;
+  } catch (error) {
+    console.error("Error compressing image:", error);
+    // Return original image URI if compression fails
+    return imageUri;
+  }
 }
 
 /**
@@ -103,8 +167,11 @@ export async function uploadImage(imageUri: string): Promise<{path: string|null,
     }
     const userId = data.session.user.id;
 
+    // Compress the image before uploading
+    const compressedImageUri = await compressImage(imageUri);
+    
     // Format the URI properly
-    const formattedUri = formatImageUri(imageUri);
+    const formattedUri = formatImageUri(compressedImageUri);
     
     // Generate a unique file name
     const timestamp = new Date().getTime();

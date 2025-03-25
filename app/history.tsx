@@ -408,7 +408,7 @@ const HistoryScreen = () => {
           className="p-3" // Increased touch target
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Additional hit area
         >
-          <Filter size={24} color="#000" />
+          {/* <Filter size={24} color="#000" /> */}
         </TouchableOpacity>
       </View>
 

@@ -4,6 +4,8 @@ import { useRouter } from "expo-router";
 import { Camera as CameraIcon, Zap, ZapOff, RefreshCw, ArrowLeft } from "lucide-react-native";
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as FileSystem from "expo-file-system";
+import * as ImageManipulator from 'expo-image-manipulator';
+import { compressImage } from "../lib/storage-service";
 
 export default function ScanScreen() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const overlayOpacity = useRef(new Animated.Value(1)).current;
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleCameraReady = () => {
     setIsCameraReady(true);
@@ -34,7 +37,13 @@ export default function ScanScreen() {
       return;
     }
 
+    if (isProcessing) {
+      Alert.alert("Processing", "Please wait while the previous image is being processed.");
+      return;
+    }
+
     try {
+      setIsProcessing(true);
       let photo;
       
       if (Platform.OS === 'web') {
@@ -67,8 +76,8 @@ export default function ScanScreen() {
           
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           
-          // Get the image as a data URL
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          // Get the image as a data URL with compression
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress at capture time for web
           
           // Create a photo object similar to what takePictureAsync returns
           photo = {
@@ -83,7 +92,7 @@ export default function ScanScreen() {
         // Native implementation (iOS, Android)
         if (cameraRef.current) {
           photo = await cameraRef.current.takePictureAsync({
-            quality: 0.8,
+            quality: 0.7, // Initial compression at capture time
           });
         } else {
           throw new Error("Camera reference not available");
@@ -96,7 +105,7 @@ export default function ScanScreen() {
       
       // Create a unique filename
       const timestamp = new Date().getTime();
-      const newUri = `${FileSystem.documentDirectory}receipt_${timestamp}.jpg`;
+      let newUri = `${FileSystem.documentDirectory}receipt_${timestamp}.jpg`;
       
       // For web, we need to handle the image differently
       if (Platform.OS === 'web') {
@@ -110,11 +119,17 @@ export default function ScanScreen() {
           params: { imageUri: photo.uri },
         });
       } else {
-        // Copy the file to a persistent location (for native platforms)
+        // Compress the image before saving to local storage
+        console.log("Compressing captured image...");
+        const compressedUri = await compressImage(photo.uri);
+        
+        // Copy the compressed file to a persistent location (for native platforms)
         await FileSystem.copyAsync({
-          from: photo.uri,
+          from: compressedUri,
           to: newUri
         });
+        
+        console.log("Image saved to:", newUri);
         
         // Navigate to receipt details with the image URI
         router.push({
@@ -125,6 +140,8 @@ export default function ScanScreen() {
     } catch (error) {
       console.error("Error taking picture:", error);
       Alert.alert("Error", "Failed to capture image. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -223,13 +240,17 @@ export default function ScanScreen() {
           <View style={styles.captureContainer}>
             <TouchableOpacity
               onPress={handleTakePhoto}
-              disabled={!isCameraReady}
+              disabled={!isCameraReady || isProcessing}
               style={[
                 styles.captureButton,
-                !isCameraReady && styles.captureButtonDisabled
+                (!isCameraReady || isProcessing) && styles.captureButtonDisabled
               ]}
             >
-              <CameraIcon size={32} color="#000" />
+              {isProcessing ? (
+                <Text style={styles.processingText}>...</Text>
+              ) : (
+                <CameraIcon size={32} color="#000" />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -336,4 +357,9 @@ const styles = StyleSheet.create({
   captureButtonDisabled: {
     backgroundColor: "#aaa",
   },
+  processingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  }
 });
