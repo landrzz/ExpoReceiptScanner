@@ -216,21 +216,41 @@ export async function uploadImage(imageUri: string): Promise<{path: string|null,
  */
 export async function deleteImage(path: string): Promise<{success: boolean, error: any}> {
   try {
-    if (!path) return { success: true, error: null };
+    if (!path) {
+      console.log("No image path provided for deletion");
+      return { success: true, error: null };
+    }
+    
+    console.log("Original image path for deletion:", path);
     
     // If it's a full URL, extract just the path part
     if (path.includes(STORAGE_BUCKET)) {
       const urlParts = path.split(STORAGE_BUCKET + '/');
       if (urlParts.length > 1) {
         path = urlParts[1];
+        console.log("Extracted path from URL:", path);
       }
     }
     
-    const { error } = await supabase.storage
+    // Check if the path has URL encoding that needs to be decoded
+    if (path.includes('%')) {
+      const decodedPath = decodeURIComponent(path);
+      console.log("Decoded URL-encoded path:", decodedPath);
+      path = decodedPath;
+    }
+    
+    console.log("Final path for deletion:", path);
+    
+    const { data, error } = await supabase.storage
       .from(STORAGE_BUCKET)
       .remove([path]);
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase storage removal error:", error);
+      throw error;
+    }
+    
+    console.log("Image deletion response:", data);
     return { success: true, error: null };
   } catch (error) {
     console.error("Error deleting image:", error);

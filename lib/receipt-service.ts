@@ -239,6 +239,7 @@ export async function updateReceipt(
 export async function deleteReceipt(id: string) {
   try {
     const userId = await getCurrentUserId();
+    console.log(`Deleting receipt ${id} for user ${userId}`);
     
     // First get the receipt to get the image path
     const { data: receipt, error: fetchError } = await supabase
@@ -253,6 +254,8 @@ export async function deleteReceipt(id: string) {
       throw fetchError;
     }
     
+    console.log("Receipt to delete:", JSON.stringify(receipt, null, 2));
+    
     // Delete the receipt record
     const { error } = await supabase.from("receipts").delete().eq("id", id).eq("user_id", userId);
 
@@ -261,15 +264,21 @@ export async function deleteReceipt(id: string) {
       throw error;
     }
     
+    console.log("Receipt record deleted successfully");
+    
     // If the receipt had an image, delete it from storage
     if (receipt.image_path) {
       console.log("Deleting image for receipt:", id, "path:", receipt.image_path);
-      const { error: deleteImageError } = await deleteImage(receipt.image_path);
+      const { error: deleteImageError, success } = await deleteImage(receipt.image_path);
+      
+      console.log("Image deletion result:", success ? "Success" : "Failed");
       
       if (deleteImageError) {
         console.warn("Error deleting image:", deleteImageError);
         // We don't throw here because the receipt was already deleted
       }
+    } else {
+      console.log("Receipt had no image to delete");
     }
 
     return { success: true, error: null };

@@ -4,6 +4,7 @@ import { X, Calendar, Clock, MapPin, FileText, Tag } from 'lucide-react-native';
 import { Receipt, supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 import { getStorageUrl } from '../lib/storage-service';
+import { deleteReceipt as deleteReceiptService } from '../lib/receipt-service';
 
 type ReceiptDetailsModalProps = {
   isVisible: boolean;
@@ -50,13 +51,10 @@ const ReceiptDetailsModal = ({
       setIsDeleting(true);
       console.log("Deleting receipt:", receipt.id);
       
-      // Delete the receipt from Supabase
-      const { error } = await supabase
-        .from('receipts')
-        .delete()
-        .eq('id', receipt.id);
+      // Use the deleteReceipt service function instead of directly calling Supabase
+      const { success, error } = await deleteReceiptService(receipt.id);
         
-      if (error) {
+      if (!success || error) {
         console.error("Error deleting receipt:", error);
         if (Platform.OS === 'web') {
           window.alert("Failed to delete receipt. Please try again.");
