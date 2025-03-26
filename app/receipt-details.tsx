@@ -16,13 +16,15 @@ import {
   TouchableWithoutFeedback,
   StatusBar
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, router as expoRouter } from "expo-router";
 import { MapPin, ScanLine, ArrowLeft } from "lucide-react-native";
 import { saveReceipt, updateReceipt } from "../lib/receipt-service";
 import { extractReceiptInfo } from "../lib/openai-service";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from 'expo-location';
 import { getStorageUrl } from "../lib/storage-service";
+import { getUserProfile } from "../lib/profile-service";
+import { supabase } from "../lib/supabase";
 
 const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
 
@@ -50,6 +52,7 @@ export default function ReceiptDetailsScreen() {
   const [isScanning, setIsScanning] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [processedImageUri, setProcessedImageUri] = useState<string | null>(null);
+  const [userFirstName, setUserFirstName] = useState<string | null>(null);
 
   // Handle direct edits to form fields
   const updateFormField = (field: string, value: string) => {
@@ -58,6 +61,51 @@ export default function ReceiptDetailsScreen() {
       [field]: value
     }));
   };
+
+  // Fetch user profile data when component mounts
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        // Get the current user session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session?.user) {
+          const userId = sessionData.session.user.id;
+          const user = await getUserProfile(userId);
+          
+          console.log('User metadata:', JSON.stringify(user.user_metadata));
+          
+          // Check if user has metadata with first_name
+          let firstName = null;
+          
+          if (user.user_metadata?.data?.first_name) {
+            // This is the structure used by ProfileModal
+            firstName = user.user_metadata.data.first_name;
+            console.log('User first name loaded from data:', firstName);
+          } else if (user.user_metadata?.first_name) {
+            firstName = user.user_metadata.first_name;
+            console.log('User first name loaded directly:', firstName);
+          } else {
+            console.log('No first name found in user profile');
+          }
+          
+          if (firstName) {
+            setUserFirstName(firstName);
+            
+            // Pre-fill the notes field with the user's first name if we're not in editing mode
+            // and the notes field is empty
+            if (!isEditing && !formState.notes) {
+              updateFormField('notes', firstName);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
 
   // Initialize form for editing mode if applicable
   useEffect(() => {
@@ -160,6 +208,10 @@ export default function ReceiptDetailsScreen() {
       }
       
       console.log(`Receipt ${isEditing ? "updated" : "saved"} successfully:`, result.data);
+      
+      // Emit an event to notify that a receipt has been updated
+      // This will be caught by the history screen to refresh its data
+      expoRouter.setParams({ receiptUpdated: 'true', timestamp: Date.now().toString() });
       
       // Navigate back to home screen
       router.push("/");
@@ -286,6 +338,11 @@ export default function ReceiptDetailsScreen() {
         
         updateFormField('amount', extractedData.amount.toString());
         updateFormField('vendor', extractedData.vendor || '');
+        
+        // Pre-fill notes with user's first name if available
+        if (userFirstName && !formState.notes) {
+          updateFormField('notes', userFirstName);
+        }
         
         Alert.alert(
           "Scan Complete", 

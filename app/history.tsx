@@ -11,7 +11,7 @@ import {
   Image,
   StatusBar,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
@@ -159,6 +159,7 @@ const categoryColors = {
 
 const HistoryScreen = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState({
     month: new Date().getMonth() + 1,
@@ -193,35 +194,46 @@ const HistoryScreen = () => {
     return `${monthNames[selectedDate.month - 1]} ${selectedDate.year}`;
   };
 
-  useEffect(() => {
-    const fetchReceipts = async () => {
-      try {
-        setLoading(true);
+  // Function to fetch receipts
+  const fetchReceipts = async () => {
+    try {
+      setLoading(true);
 
-        // Fetch receipts for the selected month and year
-        const { data, error } = await getReceiptsByMonth(
-          selectedDate.month,
-          selectedDate.year
-        );
-        
-        if (error) {
-          console.error("Month receipts error:", error);
-          throw error;
-        }
-        console.log("Month receipts data:", data);
-        setReceipts(data || []);
-      } catch (err) {
-        console.error("Error fetching receipts:", err);
-        setError(err as Error);
-        // Show empty list on error instead of mock data
-        setReceipts([]);
-      } finally {
-        setLoading(false);
+      // Fetch receipts for the selected month and year
+      const { data, error } = await getReceiptsByMonth(
+        selectedDate.month,
+        selectedDate.year
+      );
+      
+      if (error) {
+        console.error("Month receipts error:", error);
+        throw error;
       }
-    };
+      console.log("Month receipts data:", data);
+      setReceipts(data || []);
+    } catch (err) {
+      console.error("Error fetching receipts:", err);
+      setError(err as Error);
+      // Show empty list on error instead of mock data
+      setReceipts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Fetch receipts when the component mounts or when the selected date changes
+  useEffect(() => {
     fetchReceipts();
   }, [selectedDate]);
+
+  // Listen for receipt update events and refresh data when they occur
+  useEffect(() => {
+    // Check if we have a receiptUpdated param, which indicates a receipt was just updated
+    if (params.receiptUpdated === 'true') {
+      console.log('Receipt was updated, refreshing data...');
+      fetchReceipts();
+    }
+  }, [params.receiptUpdated, params.timestamp]);
 
   const handleDateSelection = (year: number, month: number) => {
     setSelectedDate({ year, month });
