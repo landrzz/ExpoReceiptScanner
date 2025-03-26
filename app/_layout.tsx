@@ -6,7 +6,7 @@ import { useFonts } from "expo-font";
 import { Stack, Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, Fragment } from "react";
 import "react-native-reanimated";
 import "../global.css";
 import { Platform } from "react-native";
@@ -19,7 +19,8 @@ import AuthGuard from "../components/AuthGuard";
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+// Make sure this is explicitly exported as default
+export default function RootLayout(): JSX.Element {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -61,7 +62,7 @@ export default function RootLayout() {
   }, []);
 
   if (!loaded) {
-    return null;
+    return <Fragment />;
   }
 
   return (

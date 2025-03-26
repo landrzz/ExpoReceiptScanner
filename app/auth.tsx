@@ -20,7 +20,8 @@ type AuthScreenProps = {
   onPreviewPress?: () => void;
 };
 
-export default function AuthScreen({ onPreviewPress }: AuthScreenProps) {
+// Explicitly mark as default export
+export default function AuthScreen({ onPreviewPress }: AuthScreenProps): JSX.Element {
   const router = useRouter();
   const { user } = useAuth();
 

@@ -11,17 +11,23 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.southernsoftware.receiptscannerpro",
+      "icon": "./assets/images/ios-icon.png",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to scan receipts."
+        "NSCameraUsageDescription": "This app uses the camera to scan receipts.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/ios-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.southernsoftware.receiptscannerpro",
-      "permissions": ["CAMERA"],
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -34,7 +40,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/ios-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -51,6 +57,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "2bba326f-8211-4446-af95-58444cabde26"
+      }
+    },
+    "owner": "landrzz"
   }
 }
