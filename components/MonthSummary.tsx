@@ -16,10 +16,10 @@ interface MonthSummaryProps {
 }
 
 const CATEGORY_COLORS = {
-  FOOD: "#4CAF50",
-  GAS: "#2196F3",
-  TRAVEL: "#FFC107",
-  OTHER: "#9C27B0"
+  FOOD: "#22c55e",  // Green (equivalent to bg-green-500)
+  GAS: "#3b82f6",   // Blue (equivalent to bg-blue-500)
+  TRAVEL: "#a855f7", // Purple (equivalent to bg-purple-500)
+  OTHER: "#6b7280"  // Gray (equivalent to bg-gray-500)
 };
 
 const MonthSummary = ({

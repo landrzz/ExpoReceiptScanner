@@ -42,7 +42,7 @@ export default function HomeScreen() {
             Welcome back
           </Text>
           <Text className="text-gray-500">
-            Manage your receipts and expenses
+            Congrats on staying organized!
           </Text>
         </View>
 

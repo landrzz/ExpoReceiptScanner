@@ -26,7 +26,16 @@ import { getStorageUrl } from "../lib/storage-service";
 import { getUserProfile } from "../lib/profile-service";
 import { supabase } from "../lib/supabase";
 
-const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"];
+const categories = ["GAS", "FOOD", "TRAVEL", "OTHER"] as const;
+type CategoryType = typeof categories[number];
+
+// Category color mapping
+const categoryColors: Record<CategoryType, string> = {
+  FOOD: "bg-green-500",
+  GAS: "bg-blue-500",
+  TRAVEL: "bg-purple-500",
+  OTHER: "bg-gray-500",
+};
 
 export default function ReceiptDetailsScreen() {
   const router = useRouter();
@@ -40,7 +49,7 @@ export default function ReceiptDetailsScreen() {
   
   // Form state
   const [formState, setFormState] = useState({
-    category: 'OTHER', // Set a default category
+    category: 'OTHER' as CategoryType, // Set a default category
     notes: '',
     location: '',
     amount: '0',
@@ -59,6 +68,14 @@ export default function ReceiptDetailsScreen() {
     setFormState(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  // Handle category selection specifically
+  const updateCategory = (category: CategoryType) => {
+    setFormState(prev => ({
+      ...prev,
+      category
     }));
   };
 
@@ -115,7 +132,7 @@ export default function ReceiptDetailsScreen() {
     if (isEditing) {
       try {
         setFormState({
-          category: String(params.category || 'OTHER'), // Set default category if not provided
+          category: String(params.category || 'OTHER') as CategoryType, // Set default category if not provided
           notes: String(params.notes || ''),
           location: String(params.location || ''),
           amount: String(params.amount || '0'),
@@ -126,37 +143,78 @@ export default function ReceiptDetailsScreen() {
         console.error("Error initializing form state:", error);
       }
     }
-  }, []);
+  }, [isEditing, params]);
 
   // Process the image URI when it changes
   useEffect(() => {
-    if (imageUri) {
-      console.log("Original Image URI:", imageUri);
-      
-      // Process the image URI
-      let finalUri = imageUri;
-      
-      // If editing and the URI is from Supabase storage
-      if (isEditing && !imageUri.startsWith('file://') && !imageUri.startsWith('data:')) {
-        // Make sure we're using the public URL for Supabase storage paths
-        finalUri = getStorageUrl(imageUri);
-        console.log("Processed Image URI for editing:", finalUri);
-      } else if (imageUri.startsWith('file://') || imageUri.startsWith('data:')) {
-        // Local file or data URI, use as is
-        finalUri = imageUri;
-        console.log("Using local image URI:", finalUri);
-      } else {
-        // Any other case, try to get a storage URL
-        finalUri = getStorageUrl(imageUri);
-        console.log("Fallback processed Image URI:", finalUri);
+    const processImage = async () => {
+      try {
+        // For editing mode, prioritize looking up the image path in the database
+        if (isEditing && receiptId) {
+          console.log("Edit mode - checking database for image path");
+          
+          // Fetch the receipt from the database to get the image path
+          const { data, error } = await supabase
+            .from("receipts")
+            .select("image_path")
+            .eq("id", receiptId)
+            .single();
+          
+          if (error) {
+            console.error("Error fetching receipt image from DB:", error);
+          } else if (data && data.image_path) {
+            console.log("Found image path in database:", data.image_path);
+            // Use the image path to generate a public URL
+            const publicUrl = getStorageUrl(data.image_path);
+            console.log("DB Image: Generated public URL:", publicUrl);
+            setIsImageLoading(true);
+            setProcessedImageUri(publicUrl);
+            return; // Exit early since we found and set the image
+          } else {
+            console.log("No image path found in database for receipt:", receiptId);
+          }
+        }
+        
+        // Fall back to imageUri parameter if provided
+        if (imageUri) {
+          console.log("Processing imageUri parameter:", imageUri);
+          setIsImageLoading(true);
+          
+          // Process the image URI
+          let finalUri = imageUri;
+          
+          // Handle different image URI formats
+          if (imageUri.startsWith('file://') || imageUri.startsWith('data:')) {
+            // Local file or data URI, use as is
+            finalUri = imageUri;
+            console.log("Using local image URI:", finalUri);
+          } else if (imageUri.startsWith('http')) {
+            // Already a full URL, use as is
+            finalUri = imageUri;
+            console.log("Using existing URL:", finalUri);
+          } else {
+            // If URI is from Supabase storage (not a full URL yet)
+            // Make sure we're using the public URL for Supabase storage paths
+            finalUri = getStorageUrl(imageUri);
+            console.log("Processed Image URI using getStorageUrl:", finalUri);
+          }
+          
+          console.log("Final image URI to display:", finalUri);
+          setProcessedImageUri(finalUri);
+        } else {
+          console.log("No image URI provided");
+          setProcessedImageUri(null);
+          setIsImageLoading(false);
+        }
+      } catch (error) {
+        console.error("Error processing image URI:", error);
+        setProcessedImageUri(null);
+        setIsImageLoading(false);
       }
-      
-      setProcessedImageUri(finalUri);
-      setIsImageLoading(true);
-    } else {
-      setProcessedImageUri(null);
-    }
-  }, [imageUri, isEditing]);
+    };
+    
+    processImage();
+  }, [imageUri, isEditing, receiptId]);
 
   // Set initial loading state
   useEffect(() => {
@@ -366,9 +424,11 @@ export default function ReceiptDetailsScreen() {
   };
 
   const getDisplayImageUri = (imageUri: string) => {
+    if (!imageUri) return '';
+    
     // This function is now mainly used for the AI scanning
     // For display, we use the processedImageUri state
-    if (imageUri.startsWith('http') || imageUri.startsWith('file://')) {
+    if (imageUri.startsWith('http') || imageUri.startsWith('file://') || imageUri.startsWith('data:')) {
       return imageUri;
     } else {
       return getStorageUrl(imageUri);
@@ -426,15 +486,25 @@ export default function ReceiptDetailsScreen() {
                         setIsImageLoading(true);
                       }}
                       onLoad={() => {
-                        console.log("Image loaded successfully");
+                        console.log("Image loaded successfully:", processedImageUri);
+                        setIsImageLoading(false);
                       }}
                       onLoadEnd={() => {
                         console.log("Image loading ended");
                         setIsImageLoading(false);
                       }}
                       onError={(error) => {
-                        console.log("Image loading error for URI:", processedImageUri);
+                        console.error("Image loading error:", error.nativeEvent.error);
+                        console.log("Failed URI:", processedImageUri);
                         setIsImageLoading(false);
+                        
+                        // Only show alert in development mode
+                        if (__DEV__) {
+                          Alert.alert(
+                            "Image Loading Error",
+                            `Failed to load image: ${processedImageUri}. Error: ${error.nativeEvent.error}`
+                          );
+                        }
                       }}
                     />
                     {isImageLoading && (
@@ -481,8 +551,8 @@ export default function ReceiptDetailsScreen() {
                   {categories.map((category) => (
                     <TouchableOpacity
                       key={category}
-                      onPress={() => updateFormField('category', category)}
-                      className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? "bg-blue-500" : "bg-white"}`}
+                      onPress={() => updateCategory(category)}
+                      className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? categoryColors[category] : "bg-white"}`}
                     >
                       <Text
                         className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}

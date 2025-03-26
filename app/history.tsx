@@ -10,13 +10,15 @@ import {
   Platform,
   Image,
   StatusBar,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Calendar,
-  Filter,
   ChevronDown,
+  CheckSquare,
+  Square,
 } from "lucide-react-native";
 import { getReceipts, getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
@@ -24,6 +26,7 @@ import ImageViewerModal from "../components/ImageViewerModal";
 import MonthYearPicker from "../components/MonthYearPicker";
 import { getStorageUrl } from "../lib/storage-service";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ReceiptDetailsModal from "../components/ReceiptDetailsModal";
 
 // Fallback mock data for when API fails
 const mockReceipts: Receipt[] = [
@@ -173,6 +176,9 @@ const HistoryScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [loadingImages, setLoadingImages] = useState<Record<string, boolean>>({});
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [receiptDetailsVisible, setReceiptDetailsVisible] = useState(false);
 
   const monthNames = [
     "January",
@@ -240,22 +246,56 @@ const HistoryScreen = () => {
   };
 
   const toggleReceiptSelection = (id: string) => {
-    if (selectedReceipts.includes(id)) {
-      setSelectedReceipts(
-        selectedReceipts.filter((receiptId) => receiptId !== id),
-      );
+    if (selectionMode) {
+      if (selectedReceipts.includes(id)) {
+        setSelectedReceipts(
+          selectedReceipts.filter((receiptId) => receiptId !== id),
+        );
+      } else {
+        setSelectedReceipts([...selectedReceipts, id]);
+      }
     } else {
-      setSelectedReceipts([...selectedReceipts, id]);
+      // In non-selection mode, show receipt details modal
+      const receipt = receipts.find(r => r.id === id);
+      if (receipt) {
+        setSelectedReceipt(receipt);
+        setReceiptDetailsVisible(true);
+      }
     }
   };
 
-  const handleBatchAction = (action: "pdf" | "submit") => {
-    if (selectedReceipts.length === 0) return;
+  const handleDeleteReceipt = (receiptId: string) => {
+    // Remove the deleted receipt from the list
+    setReceipts(receipts.filter(r => r.id !== receiptId));
+  };
 
-    console.log(`Performing ${action} action on receipts:`, selectedReceipts);
-    // In a real app, this would trigger the appropriate action
+  const handleEditReceipt = (receipt: Receipt) => {
+    // Close the modal
+    setReceiptDetailsVisible(false);
+    
+    // Navigate to the receipt-details page with the receipt data
+    const imageUrl = receipt.image_path ? 
+      (receipt.image_path.startsWith('http') ? receipt.image_path : getStorageUrl(receipt.image_path)) 
+      : null;
+      
+    router.push({
+      pathname: "/receipt-details",
+      params: {
+        id: receipt.id,
+        imageUri: imageUrl,
+        category: receipt.category,
+        notes: receipt.notes || '',
+        location: receipt.location || '',
+        amount: receipt.amount.toString(),
+        vendor: receipt.vendor || '',
+        isEditing: 'true'
+      }
+    });
+  };
 
-    // Reset selection after action
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    // Clear selected receipts when switching modes
     setSelectedReceipts([]);
   };
 
@@ -382,6 +422,61 @@ const HistoryScreen = () => {
     );
   };
 
+  const handleBatchAction = (action: "pdf" | "delete") => {
+    if (selectedReceipts.length === 0) return;
+
+    if (action === "delete") {
+      // Show confirmation before deleting
+      if (Platform.OS === 'web') {
+        if (window.confirm(`Are you sure you want to delete ${selectedReceipts.length} receipts? This action cannot be undone.`)) {
+          deleteSelectedReceipts();
+        }
+      } else {
+        Alert.alert(
+          "Delete Receipts",
+          `Are you sure you want to delete ${selectedReceipts.length} receipts? This action cannot be undone.`,
+          [
+            {
+              text: "Cancel",
+              style: "cancel"
+            },
+            {
+              text: "Delete",
+              onPress: deleteSelectedReceipts,
+              style: "destructive"
+            }
+          ]
+        );
+      }
+    } else {
+      console.log(`Performing ${action} action on receipts:`, selectedReceipts);
+      // In a real app, this would trigger the appropriate action
+      
+      // Reset selection after action
+      setSelectedReceipts([]);
+    }
+  };
+
+  const deleteSelectedReceipts = async () => {
+    try {
+      // In a real implementation, you would batch delete the receipts
+      console.log("Deleting receipts:", selectedReceipts);
+      
+      // Remove the deleted receipts from the list
+      setReceipts(receipts.filter(r => !selectedReceipts.includes(r.id)));
+      
+      // Reset selection after action
+      setSelectedReceipts([]);
+    } catch (error) {
+      console.error("Error deleting receipts:", error);
+      if (Platform.OS === 'web') {
+        window.alert("Failed to delete receipts. Please try again.");
+      } else {
+        Alert.alert("Error", "Failed to delete receipts. Please try again.");
+      }
+    }
+  };
+
   return (
     <View className="flex-1 bg-white">
       {/* Image Viewer Modal */}
@@ -395,6 +490,18 @@ const HistoryScreen = () => {
           }}
         />
       )}
+
+      {/* Receipt Details Modal */}
+      <ReceiptDetailsModal
+        isVisible={receiptDetailsVisible}
+        receipt={selectedReceipt}
+        onClose={() => {
+          setReceiptDetailsVisible(false);
+          setSelectedReceipt(null);
+        }}
+        onDelete={handleDeleteReceipt}
+        onEdit={handleEditReceipt}
+      />
 
       <StatusBar barStyle="dark-content" />
       
@@ -424,18 +531,31 @@ const HistoryScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Month and Year Selector */}
+      {/* Month and Year Selector with Selection Mode Toggle */}
       <View className="p-4 bg-gray-50">
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          className="flex-row items-center justify-between bg-white p-3 rounded-lg border border-gray-200"
-        >
-          <View className="flex-row items-center">
-            <Calendar size={20} color="#4B5563" />
-            <Text className="ml-2 font-medium">{getFormattedDate()}</Text>
-          </View>
-          <ChevronDown size={20} color="#4B5563" />
-        </TouchableOpacity>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            className="flex-row items-center justify-between bg-white p-3 rounded-lg border border-gray-200 flex-1 mr-2"
+          >
+            <View className="flex-row items-center">
+              <Calendar size={20} color="#4B5563" />
+              <Text className="ml-2 font-medium">{getFormattedDate()}</Text>
+            </View>
+            <ChevronDown size={20} color="#4B5563" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={toggleSelectionMode}
+            className="bg-white p-3 rounded-lg border border-gray-200"
+          >
+            {selectionMode ? (
+              <CheckSquare size={20} color="#3B82F6" />
+            ) : (
+              <Square size={20} color="#4B5563" />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Date Picker Modal */}
         <Modal
@@ -469,10 +589,10 @@ const HistoryScreen = () => {
               <Text className="text-blue-500 font-medium">Generate PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleBatchAction("submit")}
+              onPress={() => handleBatchAction("delete")}
               className="bg-white py-1 px-3 rounded-lg"
             >
-              <Text className="text-blue-500 font-medium">Submit</Text>
+              <Text className="text-blue-500 font-medium">Delete</Text>
             </TouchableOpacity>
           </View>
         </View>

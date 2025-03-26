@@ -1,5 +1,16 @@
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, SafeAreaView, StatusBar, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  SafeAreaView, 
+  StatusBar, 
+  TouchableOpacity, 
+  KeyboardAvoidingView, 
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '../components/Header';
 import AuthForm from '../components/AuthForm';
@@ -38,26 +49,39 @@ export default function AuthScreen({ onPreviewPress }: AuthScreenProps) {
         showSettings={false}
       />
 
-      <View className="flex-1 justify-center items-center px-4">
-        <View className="w-full max-w-md">
-          <View className="mb-8 items-center">
-            <Text className="text-3xl font-bold text-gray-800 mb-2">Welcome</Text>
-            <Text className="text-gray-500 text-center">
-              Sign in to manage your receipts and expenses
-            </Text>
-          </View>
-
-          <AuthForm />
-
-          {/* Preview UI button */}
-          <TouchableOpacity 
-            className="mt-8 bg-black/30 px-4 py-3 rounded-md self-center"
-            onPress={handlePreviewUI}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
           >
-            <Text className="text-white text-sm font-medium">Preview UI Without Login</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <View className="flex-1 justify-center items-center px-4 py-6">
+              <View className="w-full max-w-md">
+                <View className="mb-8 items-center">
+                  <Text className="text-3xl font-bold text-gray-800 mb-2">Welcome</Text>
+                  <Text className="text-gray-500 text-center">
+                    Sign in to manage your receipts and expenses!
+                  </Text>
+                </View>
+
+                <AuthForm />
+
+                {/* Preview UI button */}
+                <TouchableOpacity 
+                  className="mt-8 bg-black/30 px-4 py-3 rounded-md self-center"
+                  onPress={handlePreviewUI}
+                >
+                  <Text className="text-white text-sm font-medium">Preview UI Without Login</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
