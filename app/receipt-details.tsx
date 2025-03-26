@@ -143,7 +143,7 @@ export default function ReceiptDetailsScreen() {
         console.error("Error initializing form state:", error);
       }
     }
-  }, [isEditing, params]);
+  }, [isEditing, params.category, params.notes, params.location, params.amount, params.vendor]);
 
   // Process the image URI when it changes
   useEffect(() => {
@@ -267,9 +267,13 @@ export default function ReceiptDetailsScreen() {
       
       console.log(`Receipt ${isEditing ? "updated" : "saved"} successfully:`, result.data);
       
-      // Emit an event to notify that a receipt has been updated
-      // This will be caught by the history screen to refresh its data
-      expoRouter.setParams({ receiptUpdated: 'true', timestamp: Date.now().toString() });
+      // Use a one-time notification to avoid constant re-renders
+      // Don't update router params during normal component lifecycle
+      const triggerKey = Date.now().toString();
+      if (typeof window !== 'undefined') {
+        // Store the update notification in sessionStorage instead of router params
+        sessionStorage.setItem('receiptUpdated', triggerKey);
+      }
       
       // Navigate back to home screen
       router.push("/");
