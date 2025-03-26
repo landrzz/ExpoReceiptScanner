@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, SafeAreaView, StatusBar } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "../lib/auth-context";
 
 import Header from "../components/Header";
 import ActionButtons from "../components/ActionButtons";
@@ -9,6 +10,10 @@ import MonthSummary from "../components/MonthSummary";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  
+  // Get first name from user metadata if available
+  const firstName = user?.user_metadata?.first_name || "";
 
   const handleSettingsPress = () => {
     console.log("Navigate to settings");
@@ -27,7 +32,7 @@ export default function HomeScreen() {
     <SafeAreaView className="flex-1 bg-gray-100">
       <StatusBar barStyle="dark-content" backgroundColor="#f3f4f6" />
       <Header
-        title="Receipt Scanner"
+        title="Receipt Scanner Pro"
         onSettingsPress={handleSettingsPress}
         showTitle={true}
         showSettings={false}
@@ -39,7 +44,7 @@ export default function HomeScreen() {
       >
         <View className="mb-6">
           <Text className="text-3xl font-bold text-gray-800 mb-1">
-            Welcome back
+            {firstName ? `Welcome back, ${firstName}` : "Welcome back!"}
           </Text>
           <Text className="text-gray-500">
             Congrats on staying organized!

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_STORAGE_BUCKET"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
+        "android_client_info": {
+          "package_name": "com.southernsoftware.receiptscannerpro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "268502834320-9qpm94dbbkq56h0d7pdl119k8mgolruq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.southernsoftware.receiptscannerpro",
+            "certificate_hash": "A7:74:92:53:64:9F:48:ED:E2:32:7E:A3:A8:D1:9E:CB:07:E6:6D:B3"
+          }
+        },
+        {
+          "client_id": "268502834320-09utbslbtotal0967issbg42oc98r14p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "YOUR_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "268502834320-09utbslbtotal0967issbg42oc98r14p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

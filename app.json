@@ -5,11 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "com.southernsoftware.receiptscannerpro",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.southernsoftware.receiptscannerpro",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses the camera to scan receipts."
       }
@@ -19,7 +20,9 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["CAMERA"]
+      "package": "com.southernsoftware.receiptscannerpro",
+      "permissions": ["CAMERA"],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",

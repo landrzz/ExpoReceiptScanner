@@ -44,7 +44,7 @@ export default function AuthScreen({ onPreviewPress }: AuthScreenProps) {
     <SafeAreaView className="flex-1 bg-gray-100">
       <StatusBar barStyle="dark-content" backgroundColor="#f3f4f6" />
       <Header
-        title="Receipt Scanner"
+        title="Receipt Scanner Pro"
         showTitle={true}
         showSettings={false}
       />

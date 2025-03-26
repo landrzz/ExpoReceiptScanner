@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 const Header = ({
-  title = "Receipt Scanner",
+  title = "Receipt Scanner Pro",
   onSettingsPress = () => console.log("Settings pressed"),
   showTitle = true,
   showSettings = true,

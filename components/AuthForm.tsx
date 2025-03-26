@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, A
 import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/auth-service';
 import { AuthError } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
+import { GoogleSignIn } from './auth/GoogleSignIn';
 
 type AuthMode = 'login' | 'register' | 'forgotPassword';
 
@@ -414,6 +415,20 @@ const AuthForm = () => {
           {mode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
         </Text>
       </TouchableOpacity>
+
+      {/* Social Authentication Divider */}
+      {mode !== 'forgotPassword' && (
+        <>
+          <View className="flex-row items-center my-4">
+            <View className="flex-1 h-px bg-gray-300" />
+            <Text className="mx-4 text-gray-500">or</Text>
+            <View className="flex-1 h-px bg-gray-300" />
+          </View>
+
+          {/* Google Sign-In Button */}
+          <GoogleSignIn />
+        </>
+      )}
     </View>
   );
 };
