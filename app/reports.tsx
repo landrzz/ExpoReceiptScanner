@@ -144,34 +144,48 @@ const ReportsScreen = () => {
       'OTHER': '#6B7280'
     };
     
-    // Create receipts HTML
-    const receiptsHtml = receipts.map((receipt: Receipt) => {
-      // Get the full Supabase URL for the image
-      const imageUrl = receipt.image_path ? getStorageUrl(receipt.image_path) : '';
-      console.log('Report image URL:', imageUrl);
+    // Group receipts into sets of 4 for the 2x2 grid layout
+    const receiptGroups = [];
+    for (let i = 0; i < receipts.length; i += 4) {
+      receiptGroups.push(receipts.slice(i, i + 4));
+    }
+    
+    const receiptsHtml = receiptGroups.map((group, groupIndex) => {
+      const receiptCards = group.map((receipt: Receipt) => {
+        // Get the full Supabase URL for the image
+        const imageUrl = receipt.image_path ? getStorageUrl(receipt.image_path) : '';
+        
+        // Create image HTML with better error handling and loading indicators
+        const imageHtml = imageUrl 
+          ? `<div class="receipt-image">
+              <img 
+                src="${imageUrl}" 
+                crossorigin="anonymous" 
+                onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div class=\\'image-placeholder\\'><p>Image failed to load</p></div>';" 
+              />
+            </div>` 
+          : `<div class="image-placeholder"><p>No Image</p></div>`;
+        
+        return `
+          <div class="receipt-card">
+            ${imageHtml}
+            <div class="receipt-details">
+              <h3>${receipt.vendor || 'Unknown Vendor'}</h3>
+              <p class="amount">$${receipt.amount.toFixed(2)}</p>
+              <p>Date: ${receipt.date} ${receipt.time || ''}</p>
+              <p>Category: <span style="color: ${categoryColors[receipt.category]};">${receipt.category}</span></p>
+              ${receipt.location ? `<p>Location: ${receipt.location}</p>` : ''}
+              ${receipt.notes ? `<p>Notes: ${receipt.notes}</p>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
       
-      // Create image HTML with better error handling and loading indicators
-      const imageHtml = imageUrl 
-        ? `<div style="flex: 1; min-height: 200px; position: relative;">
-            <img 
-              src="${imageUrl}" 
-              style="width: 250px; height: auto; max-height: 300px; border-radius: 8px; object-fit: cover;" 
-              crossorigin="anonymous" 
-              onerror="this.onerror=null; this.style.display='none'; this.parentNode.innerHTML='<div style=\\'width: 250px; height: 200px; background-color: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;\\'><p style=\\'color: #ef4444; text-align: center;\\'>Image failed to load</p></div>';" 
-            />
-          </div>` 
-        : `<div style="flex: 1; width: 250px; height: 200px; background-color: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><p style="color: #9ca3af;">No Image</p></div>`;
-      
+      // Each group of 4 receipts is wrapped in a page container
       return `
-        <div style="display: flex; flex-direction: row; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; background-color: white;">
-          ${imageHtml}
-          <div style="flex: 2; margin-left: 15px;">
-            <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #111827;">${receipt.vendor || 'Unknown Vendor'}</h3>
-            <p style="margin: 0 0 5px 0; font-size: 16px; font-weight: bold; color: #111827;">$${receipt.amount.toFixed(2)}</p>
-            <p style="margin: 0 0 5px 0; color: #4b5563;">Date: ${receipt.date} ${receipt.time || ''}</p>
-            <p style="margin: 0 0 5px 0; color: #4b5563;">Category: <span style="color: ${categoryColors[receipt.category]};">${receipt.category}</span></p>
-            ${receipt.location ? `<p style="margin: 0 0 5px 0; color: #4b5563;">Location: ${receipt.location}</p>` : ''}
-            ${receipt.notes ? `<p style="margin: 0 0 5px 0; color: #4b5563;">Notes: ${receipt.notes}</p>` : ''}
+        <div class="receipt-page">
+          <div class="receipt-grid">
+            ${receiptCards}
           </div>
         </div>
       `;
@@ -206,32 +220,136 @@ const ReportsScreen = () => {
           <title>Expense Report - ${formattedDate}</title>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 20px; background-color: #f9fafb; }
-            .container { max-width: 800px; margin: 0 auto; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .summary-cards { display: flex; justify-content: space-between; margin-bottom: 30px; }
-            .card { flex: 1; padding: 20px; border-radius: 12px; margin: 0 10px; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+              margin: 20px; 
+              background-color: #f9fafb; 
+            }
+            .container { 
+              max-width: 800px; 
+              margin: 0 auto; 
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              page-break-after: avoid; 
+            }
+            .summary-cards { 
+              display: flex; 
+              justify-content: space-between; 
+              margin-bottom: 30px; 
+              page-break-inside: avoid; 
+            }
+            .card { 
+              flex: 1; 
+              padding: 20px; 
+              border-radius: 12px; 
+              margin: 0 10px; 
+            }
             .blue-card { background-color: #eff6ff; }
             .purple-card { background-color: #f5f3ff; }
-            .categories-container { background-color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            .receipt-list { margin-top: 30px; }
+            .categories-container { 
+              background-color: white; 
+              border-radius: 12px; 
+              padding: 20px; 
+              margin-bottom: 30px; 
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+              page-break-inside: avoid; 
+            }
+            .receipt-list { 
+              margin-top: 30px; 
+            }
+            .receipt-page { 
+              page-break-after: always; 
+              page-break-inside: avoid; 
+              margin-bottom: 20px;
+            }
+            .receipt-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+              width: 100%;
+            }
+            .receipt-card {
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 15px;
+              background-color: white;
+              display: flex;
+              flex-direction: column;
+              page-break-inside: avoid;
+              width: 100%;
+              box-sizing: border-box;
+            }
+            .receipt-image {
+              height: 220px;
+              position: relative;
+              margin-bottom: 10px;
+              display: flex;
+              justify-content: center;
+            }
+            .receipt-image img {
+              height: 220px;
+              max-width: 100%;
+              width: auto;
+              border-radius: 8px;
+              object-fit: contain;
+            }
+            .image-placeholder {
+              width: 100%;
+              height: 220px;
+              background-color: #f3f4f6;
+              border-radius: 8px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              margin-bottom: 10px;
+            }
+            .image-placeholder p {
+              color: #9ca3af;
+            }
+            .receipt-details h3 {
+              margin: 0 0 8px 0;
+              font-size: 16px;
+              color: #111827;
+            }
+            .receipt-details p {
+              margin: 0 0 5px 0;
+              color: #4b5563;
+              font-size: 14px;
+            }
+            .receipt-details .amount {
+              font-size: 16px;
+              font-weight: bold;
+              color: #111827;
+            }
             h1 { color: #111827; }
-            h2 { color: #374151; margin-bottom: 15px; font-size: 20px; text-align: center; }
-            .controls { position: fixed; top: 10px; right: 10px; display: flex; gap: 10px; z-index: 1000; }
-            .btn { padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; text-align: center; }
-            .download-btn { background-color: #3b82f6; color: white; border: none; }
-            .print-btn { background-color: #6b7280; color: white; border: none; }
+            h2 { 
+              color: #374151; 
+              margin-bottom: 15px; 
+              font-size: 20px; 
+              text-align: center; 
+              page-break-after: avoid; 
+            }
             @media (max-width: 600px) {
               .summary-cards { flex-direction: column; }
               .card { margin: 5px 0; }
+              .receipt-grid { grid-template-columns: 1fr; }
             }
             @media print {
-              .controls { display: none; }
+              .receipt-page { page-break-after: always; }
+              .receipt-card { page-break-inside: avoid; }
+              .receipt-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                width: 100%;
+              }
             }
           </style>
         </head>
         <body>
-<div id="content" class="container">
+          <div id="content" class="container">
             <div class="header">
               <h1>Expense Report</h1>
               <p>${formattedDate}</p>
@@ -281,8 +399,34 @@ const ReportsScreen = () => {
                   allowTaint: true,
                   imageTimeout: 15000 // Increase timeout for image loading
                 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { 
+                  unit: 'mm', 
+                  format: 'a4', 
+                  orientation: 'portrait'
+                },
+                pagebreak: { 
+                  mode: ['avoid-all', 'css', 'legacy'],
+                  after: '.receipt-page'
+                }
               };
+
+              // Force the grid layout to be applied before generating the PDF
+              const receiptGrids = document.querySelectorAll('.receipt-grid');
+              receiptGrids.forEach(grid => {
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                grid.style.width = '100%';
+                grid.style.gap = '20px';
+              });
+              
+              // Ensure receipt images are displayed in portrait orientation
+              const receiptImages = document.querySelectorAll('.receipt-image img');
+              receiptImages.forEach(img => {
+                img.style.height = '220px';
+                img.style.maxWidth = '100%';
+                img.style.width = 'auto';
+                img.style.objectFit = 'contain';
+              });
 
               window.html2pdf().from(element).set(opt).save();
             }
