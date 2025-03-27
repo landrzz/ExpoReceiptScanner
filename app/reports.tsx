@@ -474,8 +474,8 @@ const ReportsScreen = () => {
       setHtmlContent(content);
       setShowWebView(true);
       
-    } catch (error) {
-      console.error('Error generating report:', error);
+    } catch (err) {
+      console.error('Error generating report:', err);
       Alert.alert('Error', 'Failed to generate report. Please try again.');
     } finally {
       setPdfLoading(false);
@@ -487,9 +487,44 @@ const ReportsScreen = () => {
     try {
       setPdfLoading(true);
       
-      // For mobile, generate a PDF using react-native-html-to-pdf
-      const formattedDate = getFormattedDate();
-      const fileName = `Expense_Report_${formattedDate.replace(' ', '_')}`;
+      // Check if we're in Expo Go (RNHTMLtoPDF will be null)
+      if (!RNHTMLtoPDF) {
+        // Fallback for Expo Go - save HTML and share that instead
+        try {
+          // Create an HTML file in the cache directory
+          const htmlFile = `${FileSystem.cacheDirectory}report.html`;
+          await FileSystem.writeAsStringAsync(htmlFile, htmlContent, { 
+            encoding: FileSystem.EncodingType.UTF8 
+          });
+          
+          // Check if sharing is available
+          const isAvailable = await Sharing.isAvailableAsync();
+          if (!isAvailable) {
+            Alert.alert('Error', 'Sharing is not available on this device');
+            return;
+          }
+          
+          // Share the HTML file (in Expo Go, this will open as a web page)
+          await Sharing.shareAsync(htmlFile, {
+            mimeType: 'text/html',
+            dialogTitle: `Expense Report - ${getFormattedDate()}`,
+            UTI: 'public.html'
+          });
+          
+          Alert.alert(
+            'Expo Go Limitation', 
+            'You are using Expo Go which doesn\'t support direct PDF generation. The report has been shared as an HTML file. In a full build, this would be a PDF.'
+          );
+          
+          return;
+        } catch (err) {
+          console.error('Error sharing HTML in Expo Go:', err);
+          throw new Error('PDF generation is not available in Expo Go. This feature requires a development or production build.');
+        }
+      }
+      
+      // Native PDF generation for development/production builds
+      const fileName = `Expense_Report_${getFormattedDate().replace(' ', '_')}`;
       
       // Generate PDF from HTML content
       const options = {
@@ -513,15 +548,25 @@ const ReportsScreen = () => {
         // Share the PDF file
         await Sharing.shareAsync(file.filePath, {
           mimeType: 'application/pdf',
-          dialogTitle: `Expense Report - ${formattedDate}`,
+          dialogTitle: `Expense Report - ${getFormattedDate()}`,
           UTI: 'com.adobe.pdf'
         });
       } else {
         throw new Error('Failed to generate PDF file');
       }
-    } catch (error) {
-      console.error('Error generating or sharing PDF:', error);
-      Alert.alert('Error', 'Failed to share PDF. Please try again.');
+    } catch (err) {
+      console.error('Error generating or sharing PDF:', err);
+      
+      // Provide a more helpful error message
+      const error = err as Error;
+      if (error.message && error.message.includes('Expo Go')) {
+        Alert.alert(
+          'Expo Go Limitation',
+          'PDF generation is not available in Expo Go. This feature requires a development or production build.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to share PDF. Please try again.');
+      }
     } finally {
       setPdfLoading(false);
     }
