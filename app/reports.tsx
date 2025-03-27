@@ -55,6 +55,7 @@ const ReportsScreen = () => {
   const [showWebView, setShowWebView] = useState(false);
   const [htmlContent, setHtmlContent] = useState('');
   const [generatedPdfPath, setGeneratedPdfPath] = useState<string | null>(null);
+  const [includeExpenseDistribution, setIncludeExpenseDistribution] = useState(false);
   const webViewRef = useRef<WebView>(null);
 
   const getFormattedDate = () => {
@@ -282,14 +283,14 @@ const ReportsScreen = () => {
               box-sizing: border-box;
             }
             .receipt-image {
-              height: 220px;
+              height: 280px;
               position: relative;
               margin-bottom: 10px;
               display: flex;
               justify-content: center;
             }
             .receipt-image img {
-              height: 220px;
+              height: 280px;
               max-width: 100%;
               width: auto;
               border-radius: 8px;
@@ -297,7 +298,7 @@ const ReportsScreen = () => {
             }
             .image-placeholder {
               width: 100%;
-              height: 220px;
+              height: 280px;
               background-color: #f3f4f6;
               border-radius: 8px;
               display: flex;
@@ -367,6 +368,7 @@ const ReportsScreen = () => {
               </div>
             </div>
             
+            ${includeExpenseDistribution ? `
             <div class="categories-container">
               <h3 style="text-align: center; font-size: 18px; margin-bottom: 15px;">Expense Distribution</h3>
               <div style="display: flex; justify-content: center; margin-bottom: 15px;">
@@ -378,6 +380,7 @@ const ReportsScreen = () => {
               </div>
               ${categoriesHtml}
             </div>
+            ` : ''}
             
             <div class="receipt-list">
               <h2>Receipts</h2>
@@ -422,7 +425,7 @@ const ReportsScreen = () => {
               // Ensure receipt images are displayed in portrait orientation
               const receiptImages = document.querySelectorAll('.receipt-image img');
               receiptImages.forEach(img => {
-                img.style.height = '220px';
+                img.style.height = '280px';
                 img.style.maxWidth = '100%';
                 img.style.width = 'auto';
                 img.style.objectFit = 'contain';
@@ -766,21 +769,50 @@ const ReportsScreen = () => {
                     ))}
                 </View>
               </View>
-
-              {/* Action Buttons */}
-              <View className="flex-row justify-between mb-6">
-                <TouchableOpacity 
-                  className="bg-blue-500 p-4 rounded-lg flex-row items-center justify-center w-full"
+              
+              {/* PDF Export Options */}
+              <View className="bg-white rounded-xl p-6 mb-6 shadow-sm">
+                <View className="items-center justify-center mb-4">
+                  <View className="bg-blue-100 w-12 h-12 rounded-full items-center justify-center mb-2">
+                    <Download size={24} color="#3B82F6" />
+                  </View>
+                  <Text className="text-lg font-bold text-center">PDF Export</Text>
+                </View>
+                
+                <View className="flex-row items-center mb-4">
+                  <TouchableOpacity 
+                    onPress={() => setIncludeExpenseDistribution(!includeExpenseDistribution)}
+                    className="flex-row items-center"
+                  >
+                    <View className={`w-5 h-5 border rounded mr-2 flex items-center justify-center ${includeExpenseDistribution ? 'bg-blue-500 border-blue-500' : 'border-gray-400'}`}>
+                      {includeExpenseDistribution && (
+                        <Text className="text-white text-xs font-bold">✓</Text>
+                      )}
+                    </View>
+                    <Text className="text-gray-700">Include Expense Distribution</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <TouchableOpacity
+                  className="flex-row items-center justify-center bg-blue-500 rounded-lg p-3"
                   onPress={handleExportPdf}
                   disabled={pdfLoading}
                 >
                   {pdfLoading ? (
-                    <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                    <ActivityIndicator color="white" size="small" />
                   ) : (
-                    <Download size={20} color="white" style={{ marginRight: 8 }} />
+                    <>
+                      <Download size={20} color="white" />
+                      <Text className="ml-2 text-white font-medium">
+                        Generate PDF Report
+                      </Text>
+                    </>
                   )}
-                  <Text className="text-white font-medium">Export & Share</Text>
                 </TouchableOpacity>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="flex-row justify-between mb-6">
               </View>
             </View>
           )}
