@@ -114,35 +114,36 @@ export function getStorageUrl(path: string): string {
  */
 export async function ensureStorageBucketExists(): Promise<void> {
   try {
-    // Check if user is authenticated first
-    const { data } = await supabase.auth.getSession();
-    if (!data.session?.user) {
-      console.log("User not authenticated, skipping bucket initialization");
-      return;
-    }
-    
     // Check if the bucket exists
-    const { data: buckets, error: bucketsError } = await supabase
-      .storage
-      .listBuckets();
+    const { data: buckets, error } = await supabase.storage.listBuckets();
     
-    if (bucketsError) {
-      console.error("Error checking buckets:", bucketsError);
-      return;
+    if (error) {
+      console.error("Error checking storage buckets:", error.message);
+      return; // Return early instead of throwing
     }
     
-    const bucketExists = buckets?.some(bucket => bucket.name === STORAGE_BUCKET);
+    // Check if our bucket exists
+    const bucketExists = buckets.some(bucket => bucket.name === STORAGE_BUCKET);
     
     if (!bucketExists) {
-      // Instead of trying to create the bucket (which fails due to RLS policies),
-      // just log that it doesn't exist. The bucket should be created manually
-      // in the Supabase dashboard.
-      console.log(`Storage bucket '${STORAGE_BUCKET}' does not exist. Using it anyway.`);
+      console.log(`Creating storage bucket: ${STORAGE_BUCKET}`);
+      const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+        public: false,
+        fileSizeLimit: 5242880, // 5MB
+      });
+      
+      if (createError) {
+        console.error("Error creating storage bucket:", createError.message);
+        return; // Return early instead of throwing
+      }
+      
+      console.log(`Storage bucket created: ${STORAGE_BUCKET}`);
     } else {
-      console.log(`Storage bucket '${STORAGE_BUCKET}' exists.`);
+      console.log(`Storage bucket already exists: ${STORAGE_BUCKET}`);
     }
   } catch (error) {
-    console.error("Error checking if bucket exists:", error);
+    // Log the error but don't throw it to prevent app crashes
+    console.error("Error in ensureStorageBucketExists:", error);
   }
 }
 

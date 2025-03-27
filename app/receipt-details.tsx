@@ -14,7 +14,8 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   TouchableWithoutFeedback,
-  StatusBar
+  StatusBar,
+  InputAccessoryView
 } from "react-native";
 import { useLocalSearchParams, useRouter, router as expoRouter } from "expo-router";
 import { MapPin, ScanLine, ArrowLeft } from "lucide-react-native";
@@ -443,7 +444,7 @@ export default function ReceiptDetailsScreen() {
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+      keyboardVerticalOffset={0}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1 bg-gray-100">
@@ -472,7 +473,8 @@ export default function ReceiptDetailsScreen() {
 
           <ScrollView 
             className="flex-1 p-4"
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={true}
             contentContainerStyle={{ paddingBottom: 100 }} 
           >
@@ -649,6 +651,9 @@ export default function ReceiptDetailsScreen() {
           </ScrollView>
         </View>
       </TouchableWithoutFeedback>
+      
+      {/* Empty InputAccessoryView to prevent the default iOS keyboard accessory view */}
+      {Platform.OS === 'ios' && <InputAccessoryView nativeID="emptyAccessoryView" />}
     </KeyboardAvoidingView>
   );
 }

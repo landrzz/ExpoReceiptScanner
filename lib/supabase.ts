@@ -1,10 +1,35 @@
 import { createClient } from "@supabase/supabase-js";
 import "react-native-url-polyfill/auto";
+import { Platform } from "react-native";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY as string;
+// Log initialization for debugging
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("[Supabase] Missing environment variables for Supabase initialization");
+  console.error(`URL defined: ${Boolean(SUPABASE_URL)}, Key defined: ${Boolean(SUPABASE_ANON_KEY)}`);
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a custom storage object that safely checks for localStorage availability
+const customStorage = Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  ? {
+      getItem: (key: string) => window.localStorage.getItem(key),
+      setItem: (key: string, value: string) => window.localStorage.setItem(key, value),
+      removeItem: (key: string) => window.localStorage.removeItem(key),
+    }
+  : undefined;
+
+// Create client with proper options for web and native
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    storage: customStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: Platform.OS === 'web' && typeof window !== 'undefined',
+  },
+});
+
+// Log successful initialization
+console.log(`[Supabase] Client initialized on ${Platform.OS} platform`);
 
 export type Receipt = {
   id: string;

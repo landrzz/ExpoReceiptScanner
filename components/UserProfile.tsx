@@ -1,11 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useAuth } from '../lib/auth-context';
-import { signOut } from '../lib/auth-service';
 import { useRouter } from 'expo-router';
 
 const UserProfile = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const router = useRouter();
 

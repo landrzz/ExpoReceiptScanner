@@ -9,7 +9,8 @@ import {
   KeyboardAvoidingView, 
   Platform,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  InputAccessoryView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Header from '../components/Header';
@@ -53,12 +54,13 @@ export default function AuthScreen({ onPreviewPress }: AuthScreenProps): JSX.Ele
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+        keyboardVerticalOffset={0}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView 
             contentContainerStyle={{ flexGrow: 1 }}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
           >
             <View className="flex-1 justify-center items-center px-4 py-6">
               <View className="w-full max-w-md">
@@ -82,6 +84,9 @@ export default function AuthScreen({ onPreviewPress }: AuthScreenProps): JSX.Ele
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
+        
+        {/* Empty InputAccessoryView to prevent the default iOS keyboard accessory view */}
+        {Platform.OS === 'ios' && <InputAccessoryView nativeID="emptyAccessoryView" />}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

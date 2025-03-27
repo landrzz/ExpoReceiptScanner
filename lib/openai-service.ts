@@ -1,12 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { encode } from "base64-arraybuffer";
+import { OPENAI_API_KEY } from "./config";
 
-// Using environment variables from the Supabase memories
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-// OpenAI API endpoint and key
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
+// OpenAI API endpoint
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
 /**
@@ -18,7 +14,13 @@ export async function extractReceiptInfo(imageUri: string) {
   try {
     // Check if API key is available
     if (!OPENAI_API_KEY) {
-      throw new Error("OpenAI API key is not configured. Please set EXPO_PUBLIC_OPENAI_API_KEY in your .env file.");
+      // Instead of throwing an error, return a friendly message
+      return {
+        success: false,
+        error: "OpenAI API key is not configured",
+        amount: "",
+        vendor: ""
+      };
     }
     
     // Convert image to base64

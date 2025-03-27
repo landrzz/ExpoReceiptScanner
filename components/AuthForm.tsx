@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, Alert, InputAccessoryView } from 'react-native';
 import { signInWithEmail, signUpWithEmail, resetPassword } from '../lib/auth-service';
 import { AuthError } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
@@ -429,6 +429,9 @@ const AuthForm = () => {
           <GoogleSignIn />
         </>
       )}
+      
+      {/* Empty InputAccessoryView for iOS */}
+      {Platform.OS === 'ios' && <InputAccessoryView nativeID="emptyAccessoryView" />}
     </View>
   );
 };

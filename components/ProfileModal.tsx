@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { X, LogOut, User, Mail, Calendar, Phone, Save, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../lib/auth-context';
-import { signOut } from '../lib/auth-service';
 import { updateUserProfile } from '../lib/profile-service';
 
 interface ProfileModalProps {
@@ -23,7 +22,7 @@ interface ProfileModalProps {
 }
 
 const ProfileModal = ({ visible, onClose }: ProfileModalProps) => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');

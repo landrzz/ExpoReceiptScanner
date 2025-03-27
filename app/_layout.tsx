@@ -54,11 +54,17 @@ export default function RootLayout(): JSX.Element {
           console.log("User not authenticated, skipping storage bucket initialization");
         }
       } catch (error) {
+        // Just log the error without letting it crash the app
         console.error("Error initializing storage:", error);
       }
     };
 
-    initializeStorage();
+    // Wrap in another try-catch to ensure app doesn't crash during initialization
+    try {
+      initializeStorage();
+    } catch (e) {
+      console.error("Failed to start initialization process:", e);
+    }
   }, []);
 
   if (!loaded) {

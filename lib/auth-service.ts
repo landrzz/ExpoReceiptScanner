@@ -89,6 +89,16 @@ export const signInWithEmail = async (email: string, password: string) => {
  */
 export const signOut = async () => {
   try {
+    // First check if there's a valid session
+    const { data } = await supabase.auth.getSession();
+    
+    // If no session exists, just return success (already signed out)
+    if (!data.session) {
+      console.log('No active session found, user is already signed out');
+      return { success: true };
+    }
+    
+    // Proceed with sign out since we have a session
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw error;
