@@ -13,6 +13,8 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { WebView } from 'react-native-webview';
+// @ts-ignore
+import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import MonthYearPicker from "../components/MonthYearPicker";
 import { getReceiptsByMonth } from "../lib/receipt-service";
 import { Receipt } from "../lib/supabase";
@@ -920,14 +922,37 @@ const ReportsScreen = () => {
                       // Clean up
                       document.body.removeChild(tempDiv);
                     } else {
-                      // For mobile, use file system API to save and share
-                      if (webViewRef.current) {
-                        webViewRef.current.injectJavaScript(`
-                          window.ReactNativeWebView.postMessage(JSON.stringify({
-                            type: 'generatePdf'
-                          }));
-                          true;
-                        `);
+                      // For mobile, generate a PDF using react-native-html-to-pdf
+                      const formattedDate = getFormattedDate();
+                      const fileName = `Expense_Report_${formattedDate.replace(' ', '_')}`;
+                      
+                      // Generate PDF from HTML content
+                      const options = {
+                        html: htmlContent,
+                        fileName: fileName,
+                        directory: 'Documents',
+                        width: 595, // A4 width in points (72 dpi)
+                        height: 842, // A4 height in points (72 dpi)
+                      };
+                      
+                      const file = await RNHTMLtoPDF.convert(options);
+                      
+                      if (file && file.filePath) {
+                        // Check if sharing is available
+                        const isAvailable = await Sharing.isAvailableAsync();
+                        if (!isAvailable) {
+                          Alert.alert('Error', 'Sharing is not available on this device');
+                          return;
+                        }
+                        
+                        // Share the PDF file
+                        await Sharing.shareAsync(file.filePath, {
+                          mimeType: 'application/pdf',
+                          dialogTitle: `Expense Report - ${formattedDate}`,
+                          UTI: 'com.adobe.pdf'
+                        });
+                      } else {
+                        throw new Error('Failed to generate PDF file');
                       }
                     }
                   } catch (error) {
