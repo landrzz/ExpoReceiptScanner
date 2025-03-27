@@ -48,8 +48,14 @@ export default function RootLayout(): JSX.Element {
         // Only initialize storage bucket if user is authenticated
         if (data.session?.user) {
           console.log("User authenticated, initializing storage bucket...");
-          await ensureStorageBucketExists();
-          console.log("Storage bucket initialization complete");
+          try {
+            await ensureStorageBucketExists();
+            console.log("Storage bucket initialization complete");
+          } catch (storageError) {
+            // Catch any errors specifically from storage initialization
+            console.error("Storage initialization error:", storageError);
+            // Continue app execution even if storage initialization fails
+          }
         } else {
           console.log("User not authenticated, skipping storage bucket initialization");
         }

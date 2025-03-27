@@ -119,25 +119,40 @@ export async function ensureStorageBucketExists(): Promise<void> {
     
     if (error) {
       console.error("Error checking storage buckets:", error.message);
-      return; // Return early instead of throwing
+      // Don't attempt to create bucket if we can't list buckets (likely a permissions issue)
+      console.log("Assuming storage bucket exists and continuing...");
+      return;
     }
     
     // Check if our bucket exists
     const bucketExists = buckets.some(bucket => bucket.name === STORAGE_BUCKET);
     
     if (!bucketExists) {
-      console.log(`Creating storage bucket: ${STORAGE_BUCKET}`);
-      const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
-        public: false,
-        fileSizeLimit: 5242880, // 5MB
-      });
+      // Check if the current user has admin rights before attempting to create bucket
+      // For regular users, we'll just assume the bucket exists (it should have been created by an admin)
+      const { data: userRoleData } = await supabase.auth.getUser();
+      const userRole = userRoleData?.user?.app_metadata?.role;
       
-      if (createError) {
-        console.error("Error creating storage bucket:", createError.message);
-        return; // Return early instead of throwing
+      if (userRole === 'admin' || userRole === 'service_role') {
+        try {
+          console.log(`User has admin rights. Creating storage bucket: ${STORAGE_BUCKET}`);
+          const { error: createError } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+            public: false,
+            fileSizeLimit: 5242880, // 5MB
+          });
+          
+          if (createError) {
+            console.error("Error creating storage bucket:", createError.message);
+            return;
+          }
+          
+          console.log(`Storage bucket created: ${STORAGE_BUCKET}`);
+        } catch (innerError) {
+          console.error("Exception creating storage bucket:", innerError);
+        }
+      } else {
+        console.log("User doesn't have admin rights. Assuming bucket exists and continuing...");
       }
-      
-      console.log(`Storage bucket created: ${STORAGE_BUCKET}`);
     } else {
       console.log(`Storage bucket already exists: ${STORAGE_BUCKET}`);
     }

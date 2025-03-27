@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import "react-native-url-polyfill/auto";
 import { Platform } from "react-native";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config";
+import * as SecureStore from 'expo-secure-store';
 
 // Log initialization for debugging
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -9,14 +10,27 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error(`URL defined: ${Boolean(SUPABASE_URL)}, Key defined: ${Boolean(SUPABASE_ANON_KEY)}`);
 }
 
-// Create a custom storage object that safely checks for localStorage availability
+// Create a custom storage adapter for mobile platforms using SecureStore
+const ExpoSecureStoreAdapter = {
+  getItem: async (key: string): Promise<string | null> => {
+    return await SecureStore.getItemAsync(key);
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    await SecureStore.setItemAsync(key, value);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    await SecureStore.deleteItemAsync(key);
+  },
+};
+
+// Use localStorage for web, SecureStore for mobile
 const customStorage = Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
   ? {
       getItem: (key: string) => window.localStorage.getItem(key),
       setItem: (key: string, value: string) => window.localStorage.setItem(key, value),
       removeItem: (key: string) => window.localStorage.removeItem(key),
     }
-  : undefined;
+  : ExpoSecureStoreAdapter;
 
 // Create client with proper options for web and native
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -29,7 +43,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Log successful initialization
-console.log(`[Supabase] Client initialized on ${Platform.OS} platform`);
+console.log(`[Supabase] Client initialized on ${Platform.OS} platform with persistent storage`);
 
 export type Receipt = {
   id: string;
