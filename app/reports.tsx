@@ -58,6 +58,7 @@ const ReportsScreen = () => {
   const [htmlContent, setHtmlContent] = useState('');
   const [generatedPdfPath, setGeneratedPdfPath] = useState<string | null>(null);
   const [includeExpenseDistribution, setIncludeExpenseDistribution] = useState(false);
+  const [reportType, setReportType] = useState<'digital' | 'pdf'>('pdf');
   const webViewRef = useRef<WebView>(null);
 
   const getFormattedDate = () => {
@@ -440,34 +441,24 @@ const ReportsScreen = () => {
             function handleMessage(message) {
               if (message === 'generatePDF') {
                 generatePDF();
-              } else if (message === 'print') {
-                window.print();
               }
             }
 
-            // Auto-generate PDF if on mobile (when using WebView)
-            function checkPlatformAndGenerate() {
-              const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-              const isMobile = /android|iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-              
-              if (isMobile) {
-                // Wait for everything to load
-                setTimeout(() => {
-                  if (window.ReactNativeWebView) {
-                    window.ReactNativeWebView.postMessage('ready');
-                  }
-                }, 1000);
-              }
-            }
-
-            document.addEventListener('DOMContentLoaded', checkPlatformAndGenerate);
+            // Send ready message to React Native
+            document.addEventListener('DOMContentLoaded', function() {
+              setTimeout(function() {
+                if (window.ReactNativeWebView) {
+                  window.ReactNativeWebView.postMessage('ready');
+                }
+              }, 1000);
+            });
           </script>
         </body>
       </html>
     `;
   };
   
-  // Handle PDF generation through different methods based on platform
+  // Handle PDF generation through different methods based on platform and report type
   const handleExportPdf = async () => {
     if (receipts.length === 0) {
       Alert.alert('No Data', 'There are no receipts to export for the selected period.');
@@ -479,66 +470,73 @@ const ReportsScreen = () => {
       const formattedDate = getFormattedDate();
       const content = generateHtmlContent(receipts, reportData, formattedDate);
       
-      // For both web and mobile, show the preview first
+      // Set HTML content and show WebView for both report types
       setHtmlContent(content);
       setShowWebView(true);
       
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      Alert.alert('Error', 'Failed to generate PDF. Please try again.');
+      console.error('Error generating report:', error);
+      Alert.alert('Error', 'Failed to generate report. Please try again.');
     } finally {
       setPdfLoading(false);
     }
   };
-  
-  // Handle WebView messages
-  const handleWebViewMessage = (event: any) => {
-    const message = event.nativeEvent.data;
-    if (message === 'ready') {
-      // The WebView is ready, we can send commands
-      webViewRef.current?.injectJavaScript('generatePDF()');
-    }
-  };
-  
-  // Handle sharing
-  const handleShare = async () => {
+
+  // Generate and share PDF for mobile
+  const generateAndSharePdf = async () => {
     try {
       setPdfLoading(true);
       
-      if (Platform.OS === 'web') {
-        // For web, just open the export PDF view which has sharing options
-        handleExportPdf();
-        return;
-      }
+      // For mobile, generate a PDF using react-native-html-to-pdf
+      const formattedDate = getFormattedDate();
+      const fileName = `Expense_Report_${formattedDate.replace(' ', '_')}`;
       
-      // For mobile
-      if (!generatedPdfPath) {
-        // Generate HTML if not already done
-        const formattedDate = getFormattedDate();
-        const content = generateHtmlContent(receipts, reportData, formattedDate);
-        const htmlFile = `${FileSystem.cacheDirectory}report.html`;
-        await FileSystem.writeAsStringAsync(htmlFile, content, { encoding: FileSystem.EncodingType.UTF8 });
-        setGeneratedPdfPath(htmlFile);
-      }
+      // Generate PDF from HTML content
+      const options = {
+        html: htmlContent,
+        fileName: fileName,
+        directory: 'Documents',
+        width: 595, // A4 width in points (72 dpi)
+        height: 842, // A4 height in points (72 dpi)
+      };
       
-      // Check if sharing is available
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (!isAvailable) {
-        Alert.alert('Error', 'Sharing is not available on this device');
-        return;
-      }
+      const file = await RNHTMLtoPDF.convert(options);
       
-      // Share the HTML file (which user can open in browser)
-      await Sharing.shareAsync(generatedPdfPath!, {
-        mimeType: 'text/html',
-        dialogTitle: `Expense Report - ${getFormattedDate()}`,
-        UTI: 'public.html'
-      });
+      if (file && file.filePath) {
+        // Check if sharing is available
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+          Alert.alert('Error', 'Sharing is not available on this device');
+          return;
+        }
+        
+        // Share the PDF file
+        await Sharing.shareAsync(file.filePath, {
+          mimeType: 'application/pdf',
+          dialogTitle: `Expense Report - ${formattedDate}`,
+          UTI: 'com.adobe.pdf'
+        });
+      } else {
+        throw new Error('Failed to generate PDF file');
+      }
     } catch (error) {
-      console.error('Error sharing report:', error);
-      Alert.alert('Error', 'Failed to share the report.');
+      console.error('Error generating or sharing PDF:', error);
+      Alert.alert('Error', 'Failed to share PDF. Please try again.');
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  // Handle WebView messages
+  const handleWebViewMessage = (event: any) => {
+    const message = event.nativeEvent.data;
+    if (message === 'ready' && reportType === 'pdf') {
+      // Only generate PDF automatically if PDF mode is selected
+      setTimeout(() => {
+        if (webViewRef.current) {
+          webViewRef.current.injectJavaScript('generatePDF()');
+        }
+      }, 1500);
     }
   };
 
@@ -615,9 +613,15 @@ const ReportsScreen = () => {
         }}
       >
         <TouchableOpacity 
-          onPress={() => router.replace('/')}
-          className="p-3" // Increased touch target
-          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} // Additional hit area
+          onPress={() => {
+            try {
+              router.replace("/" as any);
+            } catch (error) {
+              console.error('Navigation error:', error);
+            }
+          }}
+          className="p-3" 
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           style={{ marginLeft: 4 }}
         >
           <ArrowLeft size={24} color="#000" />
@@ -702,7 +706,13 @@ const ReportsScreen = () => {
           </Text>
           <TouchableOpacity
             className="bg-blue-500 py-2 px-4 rounded-lg"
-            onPress={() => router.push("/scan")}
+            onPress={() => {
+              try {
+                router.push("/scan" as any);
+              } catch (error) {
+                console.error('Navigation error:', error);
+              }
+            }}
           >
             <Text className="text-white font-medium">Scan a Receipt</Text>
           </TouchableOpacity>
@@ -778,7 +788,22 @@ const ReportsScreen = () => {
                   <View className="bg-blue-100 w-12 h-12 rounded-full items-center justify-center mb-2">
                     <Download size={24} color="#3B82F6" />
                   </View>
-                  <Text className="text-lg font-bold text-center">PDF Export</Text>
+                  <Text className="text-lg font-bold text-center">Report Options</Text>
+                </View>
+                
+                {/* Simple checkbox toggle for report type */}
+                <View className="flex-row items-center mb-4">
+                  <TouchableOpacity 
+                    onPress={() => setReportType(reportType === 'digital' ? 'pdf' : 'digital')}
+                    className="flex-row items-center"
+                  >
+                    <View className={`w-5 h-5 border rounded mr-2 flex items-center justify-center ${reportType === 'digital' ? 'bg-blue-500 border-blue-500' : 'border-gray-400'}`}>
+                      {reportType === 'digital' && (
+                        <Text className="text-white text-xs font-bold">✓</Text>
+                      )}
+                    </View>
+                    <Text className="text-gray-700">Generate Digital Report (Instead of PDF)</Text>
+                  </TouchableOpacity>
                 </View>
                 
                 <View className="flex-row items-center mb-4">
@@ -806,7 +831,7 @@ const ReportsScreen = () => {
                     <>
                       <Download size={20} color="white" />
                       <Text className="ml-2 text-white font-medium">
-                        Generate PDF Report
+                        Generate {reportType === 'digital' ? 'Digital' : 'PDF'} Report
                       </Text>
                     </>
                   )}
@@ -830,12 +855,13 @@ const ReportsScreen = () => {
         </ScrollView>
       )}
       
-      {/* HTML Preview Modal/WebView for PDF generation */}
+      {/* HTML Preview Modal/WebView for reports */}
       {showWebView && (
         <Modal
           visible={showWebView}
           onRequestClose={() => setShowWebView(false)}
           animationType="slide"
+          transparent={false}
         >
           <View className="flex-1 bg-white">
             <View 
@@ -853,204 +879,77 @@ const ReportsScreen = () => {
               >
                 <ArrowLeft size={24} color="#000" />
               </TouchableOpacity>
-              <Text className="text-xl font-bold">Expense Report</Text>
+              <Text className="text-xl font-bold">
+                Expense Report
+              </Text>
               <View style={{ width: 48 }} />
             </View>
             
-            {/* Action buttons for PDF */}
+            {/* Action buttons */}
             <View className="bg-white p-4 border-b border-gray-200 flex-row justify-center space-x-4">
-              <TouchableOpacity 
-                className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center"
-                onPress={async () => {
-                  try {
-                    setPdfLoading(true);
-                    
-                    if (Platform.OS === 'web') {
-                      // Create a temporary div to render the HTML
-                      const tempDiv = document.createElement('div');
-                      tempDiv.innerHTML = htmlContent;
-                      document.body.appendChild(tempDiv);
-                      
-                      // Load html2pdf.js dynamically if it's not already loaded
-                      if (typeof window.html2pdf === 'undefined') {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-                        script.async = true;
-                        
-                        // Wait for the script to load
-                        await new Promise((resolve, reject) => {
-                          script.onload = resolve;
-                          script.onerror = reject;
-                          document.head.appendChild(script);
-                        });
+              {reportType === 'digital' ? (
+                // Digital report actions
+                <>
+                  <TouchableOpacity 
+                    className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center"
+                    onPress={() => {
+                      if (webViewRef.current) {
+                        webViewRef.current.injectJavaScript('generatePDF()');
                       }
-                      
-                      // Configure html2pdf options
-                      const options = {
-                        margin: 10,
-                        filename: `Expense_Report_${selectedDate.year}_${selectedDate.month}.pdf`,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { 
-                          scale: 2,
-                          useCORS: true,
-                          logging: true,
-                          allowTaint: true,
-                          imageTimeout: 15000 // Increase timeout for image loading
-                        },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                      };
-                      
-                      // Wait for images to load before generating PDF
-                      const images = tempDiv.querySelectorAll('img');
-                      const imagePromises = Array.from(images).map(img => {
-                        if (img.complete) return Promise.resolve();
-                        return new Promise(resolve => {
-                          img.onload = resolve;
-                          img.onerror = resolve; // Continue even if image fails to load
-                        });
-                      });
-                      
-                      // Wait for all images to load or timeout after 5 seconds
-                      await Promise.race([
-                        Promise.all(imagePromises),
-                        new Promise(resolve => setTimeout(resolve, 5000))
-                      ]);
-                      
-                      // Generate PDF
-                      await window.html2pdf().set(options).from(tempDiv).save();
-                      
-                      // Clean up
-                      document.body.removeChild(tempDiv);
-                    } else {
-                      // For mobile, generate a PDF using react-native-html-to-pdf
-                      const formattedDate = getFormattedDate();
-                      const fileName = `Expense_Report_${formattedDate.replace(' ', '_')}`;
-                      
-                      // Generate PDF from HTML content
-                      const options = {
-                        html: htmlContent,
-                        fileName: fileName,
-                        directory: 'Documents',
-                        width: 595, // A4 width in points (72 dpi)
-                        height: 842, // A4 height in points (72 dpi)
-                      };
-                      
-                      const file = await RNHTMLtoPDF.convert(options);
-                      
-                      if (file && file.filePath) {
-                        // Check if sharing is available
-                        const isAvailable = await Sharing.isAvailableAsync();
-                        if (!isAvailable) {
-                          Alert.alert('Error', 'Sharing is not available on this device');
-                          return;
-                        }
-                        
-                        // Share the PDF file
-                        await Sharing.shareAsync(file.filePath, {
-                          mimeType: 'application/pdf',
-                          dialogTitle: `Expense Report - ${formattedDate}`,
-                          UTI: 'com.adobe.pdf'
-                        });
-                      } else {
-                        throw new Error('Failed to generate PDF file');
-                      }
-                    }
-                  } catch (error) {
-                    console.error('Error downloading PDF:', error);
-                    Alert.alert('Error', 'Failed to download PDF. Please try again.');
-                  } finally {
-                    setPdfLoading(false);
-                  }
-                }}
-              >
-                <Download size={18} color="white" style={{ marginRight: 8 }} />
-                <Text className="text-white font-medium">Download PDF</Text>
-              </TouchableOpacity>
-              
-              {Platform.OS === 'web' && (
-                <TouchableOpacity 
-                  className="bg-gray-200 px-4 py-2 rounded-lg flex-row items-center"
-                  onPress={() => {
-                    try {
-                      // Create a temporary iframe for printing
-                      const printIframe = document.createElement('iframe');
-                      printIframe.style.position = 'absolute';
-                      printIframe.style.top = '-9999px';
-                      printIframe.style.left = '-9999px';
-                      document.body.appendChild(printIframe);
-                      
-                      // Check if contentDocument exists before using it
-                      if (printIframe.contentDocument) {
-                        printIframe.contentDocument.write(htmlContent);
-                        printIframe.contentDocument.close();
-                      }
-                      
-                      // Wait for images to load
-                      setTimeout(() => {
-                        // Check if contentWindow exists before using it
-                        if (printIframe.contentWindow) {
-                          printIframe.contentWindow.print();
-                        }
-                        document.body.removeChild(printIframe);
-                      }, 500);
-                    } catch (error) {
-                      console.error('Error printing:', error);
-                      Alert.alert('Error', 'Failed to print. Please try again.');
-                    }
-                  }}
-                >
-                  <Printer size={18} color="#4B5563" style={{ marginRight: 8 }} />
-                  <Text className="text-gray-700 font-medium">Print</Text>
-                </TouchableOpacity>
+                    }}
+                  >
+                    <Download size={20} color="white" />
+                    <Text className="ml-2 text-white">Save as PDF</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                // PDF report actions - add share button
+                <>
+                  <TouchableOpacity 
+                    className="bg-blue-500 px-4 py-2 rounded-lg flex-row items-center"
+                    onPress={generateAndSharePdf}
+                    disabled={pdfLoading}
+                  >
+                    {pdfLoading ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <>
+                        <Share2 size={20} color="white" />
+                        <Text className="ml-2 text-white">Save/Share PDF</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    className="bg-gray-500 px-4 py-2 rounded-lg flex-row items-center"
+                    onPress={() => setShowWebView(false)}
+                  >
+                    <ArrowLeft size={20} color="white" />
+                    <Text className="ml-2 text-white">Close</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
             
-            {Platform.OS === 'web' ? (
-              <View className="flex-1">
-                <WebView
-                  source={{ html: htmlContent }}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                  }}
-                  originWhitelist={['*']}
-                  mixedContentMode="always"
-                  allowsFullscreenVideo={true}
-                  allowFileAccess={true}
-                  allowUniversalAccessFromFileURLs={true}
-                  allowFileAccessFromFileURLs={true}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                />
-              </View>
-            ) : (
-              <>
-                <WebView
-                  ref={webViewRef}
-                  source={{ html: htmlContent, baseUrl: 'https://jfbazvfmbvoufpewlwge.supabase.co' }}
-                  onMessage={handleWebViewMessage}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  originWhitelist={['*']}
-                  mixedContentMode="always"
-                  allowsFullscreenVideo={true}
-                  allowFileAccess={true}
-                  allowUniversalAccessFromFileURLs={true}
-                  allowFileAccessFromFileURLs={true}
-                  startInLoadingState={true}
-                  renderLoading={() => (
-                    <View className="absolute inset-0 justify-center items-center bg-white">
-                      <ActivityIndicator size="large" color="#3B82F6" />
-                      <Text className="mt-4 text-gray-500">Generating report...</Text>
-                    </View>
-                  )}
-                  onError={(syntheticEvent) => {
-                    const { nativeEvent } = syntheticEvent;
-                    console.error('WebView error:', nativeEvent);
-                  }}
-                />
-              </>
-            )}
+            {/* WebView for displaying HTML content */}
+            <View style={{ flex: 1 }}>
+              <WebView
+                ref={webViewRef}
+                originWhitelist={['*']}
+                source={{ html: htmlContent }}
+                onMessage={handleWebViewMessage}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color="#3B82F6" />
+                    <Text style={{ marginTop: 10 }}>Loading report...</Text>
+                  </View>
+                )}
+                style={{ flex: 1 }}
+              />
+            </View>
           </View>
         </Modal>
       )}
