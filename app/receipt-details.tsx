@@ -446,211 +446,210 @@ export default function ReceiptDetailsScreen() {
       style={{ flex: 1 }}
       keyboardVerticalOffset={0}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="flex-1 bg-gray-100">
-          <StatusBar barStyle="dark-content" />
-          
-          {/* Header with safe area padding */}
-          <View 
-            className="bg-white border-b border-gray-200 flex-row justify-between items-center"
-            style={{ 
-              paddingTop: Math.max(insets.top, 16), 
-              paddingBottom: 12,
-              paddingHorizontal: 16
-            }}
+      <View className="flex-1 bg-gray-100">
+        <StatusBar barStyle="dark-content" />
+        
+        {/* Header with safe area padding */}
+        <View 
+          className="bg-white border-b border-gray-200 flex-row justify-between items-center"
+          style={{ 
+            paddingTop: Math.max(insets.top, 16), 
+            paddingBottom: 12,
+            paddingHorizontal: 16
+          }}
+        >
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            className="p-3" 
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} 
+            style={{ marginLeft: 4 }}
           >
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              className="p-3" 
-              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }} 
-              style={{ marginLeft: 4 }}
-            >
-              <ArrowLeft size={24} color="#000" />
-            </TouchableOpacity>
-            <Text className="text-xl font-bold">{isEditing ? "Edit Receipt" : "Receipt Details"}</Text>
-            <View style={{ width: 48 }} /> 
-          </View>
-
-          <ScrollView 
-            className="flex-1 p-4"
-            keyboardShouldPersistTaps="always"
-            keyboardDismissMode="on-drag"
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 100 }} 
-          >
-            <View className="mb-6">
-              {/* Image Preview */}
-              <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
-                {processedImageUri ? (
-                  <View className="w-full h-64 relative">
-                    <Image
-                      source={{ uri: processedImageUri }}
-                      className="w-full h-64"
-                      resizeMode="contain"
-                      onLoadStart={() => {
-                        console.log("Image loading started for:", processedImageUri);
-                        setIsImageLoading(true);
-                      }}
-                      onLoad={() => {
-                        console.log("Image loaded successfully:", processedImageUri);
-                        setIsImageLoading(false);
-                      }}
-                      onLoadEnd={() => {
-                        console.log("Image loading ended");
-                        setIsImageLoading(false);
-                      }}
-                      onError={(error) => {
-                        console.error("Image loading error:", error.nativeEvent.error);
-                        console.log("Failed URI:", processedImageUri);
-                        setIsImageLoading(false);
-                        
-                        // Only show alert in development mode
-                        if (__DEV__) {
-                          Alert.alert(
-                            "Image Loading Error",
-                            `Failed to load image: ${processedImageUri}. Error: ${error.nativeEvent.error}`
-                          );
-                        }
-                      }}
-                    />
-                    {isImageLoading && (
-                      <View className="absolute inset-0 flex items-center justify-center bg-gray-100/80">
-                        <ActivityIndicator size="large" color="#3b82f6" />
-                        <Text className="text-gray-700 font-medium mt-2">Loading image...</Text>
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <View className="w-full h-64 bg-gray-200 items-center justify-center">
-                    <Text className="text-gray-500">No image available</Text>
-                  </View>
-                )}
-              </View>
-              
-              {/* AI Scan Button - Only show for new receipts with images */}
-              {!isEditing && imageUri && (
-                <TouchableOpacity
-                  onPress={() => scanWithAI(processedImageUri || imageUri)}
-                  disabled={isScanning}
-                  className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
-                >
-                  {isScanning ? (
-                    <>
-                      <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                      <Text className="text-white font-medium">Scanning Receipt...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <ScanLine size={20} color="#fff" style={{ marginRight: 8 }} />
-                      <Text className="text-white font-medium">Scan Receipt with AI</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {/* Category Selector */}
-              <View className="mb-6">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">
-                  Category
-                </Text>
-                <View className="flex-row flex-wrap justify-between">
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      onPress={() => updateCategory(category)}
-                      className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? categoryColors[category] : "bg-white"}`}
-                    >
-                      <Text
-                        className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}
-                      >
-                        {category}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Notes Input */}
-              <View className="mb-6">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">
-                  Names / Notes
-                </Text>
-                <TextInput
-                  className="bg-white p-4 rounded-lg text-gray-800"
-                  placeholder="Add notes about this receipt"
-                  value={formState.notes}
-                  onChangeText={(text) => updateFormField('notes', text)}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-              
-              {/* Amount Input */}
-              <View className="mb-6">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">
-                  Amount
-                </Text>
-                <TextInput
-                  className="bg-white p-4 rounded-lg text-gray-800"
-                  placeholder="Enter amount"
-                  value={formState.amount}
-                  onChangeText={(text) => updateFormField('amount', text)}
-                  keyboardType="numeric"
-                />
-              </View>
-              
-              {/* Vendor Input */}
-              <View className="mb-6">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">
-                  Vendor
-                </Text>
-                <TextInput
-                  className="bg-white p-4 rounded-lg text-gray-800"
-                  placeholder="Enter vendor name"
-                  value={formState.vendor}
-                  onChangeText={(text) => updateFormField('vendor', text)}
-                />
-              </View>
-
-              {/* Location Input */}
-              <View className="mb-8">
-                <Text className="text-lg font-semibold text-gray-800 mb-2">
-                  Location
-                </Text>
-                <View className="flex-row items-center bg-white rounded-lg overflow-hidden">
-                  <TouchableOpacity 
-                    onPress={handleLocationRequest}
-                    disabled={isLoadingLocation}
-                    className={`p-3 ${isLoadingLocation ? 'bg-gray-100' : ''}`}
-                    accessibilityLabel="Get current location"
-                    accessibilityHint="Requests permission to use your current location"
-                  >
-                    <MapPin size={20} color={isLoadingLocation ? "#9ca3af" : "#6b7280"} />
-                  </TouchableOpacity>
-                  <TextInput
-                    className="flex-1 p-3 text-gray-800"
-                    placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
-                    value={formState.location}
-                    onChangeText={(text) => updateFormField('location', text)}
-                    editable={!isLoadingLocation}
-                  />
-                </View>
-              </View>
-
-              {/* Save Button */}
-              <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
-              >
-                <Text className="text-white font-bold text-lg">
-                  {isSubmitting ? "Saving..." : (isEditing ? "Update Receipt" : "Save Receipt")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+            <ArrowLeft size={24} color="#000" />
+          </TouchableOpacity>
+          <Text className="text-xl font-bold">{isEditing ? "Edit Receipt" : "Receipt Details"}</Text>
+          <View style={{ width: 48 }} /> 
         </View>
-      </TouchableWithoutFeedback>
+
+        <ScrollView 
+          className="flex-1 p-4"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          onScrollBeginDrag={Keyboard.dismiss}
+        >
+          <View className="mb-6">
+            {/* Image Preview */}
+            <View className="bg-white rounded-lg overflow-hidden shadow-sm mb-3">
+              {processedImageUri ? (
+                <View className="w-full h-64 relative">
+                  <Image
+                    source={{ uri: processedImageUri }}
+                    className="w-full h-64"
+                    resizeMode="contain"
+                    onLoadStart={() => {
+                      console.log("Image loading started for:", processedImageUri);
+                      setIsImageLoading(true);
+                    }}
+                    onLoad={() => {
+                      console.log("Image loaded successfully:", processedImageUri);
+                      setIsImageLoading(false);
+                    }}
+                    onLoadEnd={() => {
+                      console.log("Image loading ended");
+                      setIsImageLoading(false);
+                    }}
+                    onError={(error) => {
+                      console.error("Image loading error:", error.nativeEvent.error);
+                      console.log("Failed URI:", processedImageUri);
+                      setIsImageLoading(false);
+                      
+                      // Only show alert in development mode
+                      if (__DEV__) {
+                        Alert.alert(
+                          "Image Loading Error",
+                          `Failed to load image: ${processedImageUri}. Error: ${error.nativeEvent.error}`
+                        );
+                      }
+                    }}
+                  />
+                  {isImageLoading && (
+                    <View className="absolute inset-0 flex items-center justify-center bg-gray-100/80">
+                      <ActivityIndicator size="large" color="#3b82f6" />
+                      <Text className="text-gray-700 font-medium mt-2">Loading image...</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View className="w-full h-64 bg-gray-200 items-center justify-center">
+                  <Text className="text-gray-500">No image available</Text>
+                </View>
+              )}
+            </View>
+            
+            {/* AI Scan Button - Only show for new receipts with images */}
+            {!isEditing && imageUri && (
+              <TouchableOpacity
+                onPress={() => scanWithAI(processedImageUri || imageUri)}
+                disabled={isScanning}
+                className={`mb-6 py-3 rounded-lg items-center flex-row justify-center ${isScanning ? "bg-indigo-300" : "bg-indigo-600"}`}
+              >
+                {isScanning ? (
+                  <>
+                    <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                    <Text className="text-white font-medium">Scanning Receipt...</Text>
+                  </>
+                ) : (
+                  <>
+                    <ScanLine size={20} color="#fff" style={{ marginRight: 8 }} />
+                    <Text className="text-white font-medium">Scan Receipt with AI</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Category Selector */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-800 mb-2">
+                Category
+              </Text>
+              <View className="flex-row flex-wrap justify-between">
+                {categories.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    onPress={() => updateCategory(category)}
+                    className={`py-3 px-4 rounded-lg mb-2 w-[48%] ${formState.category === category ? categoryColors[category] : "bg-white"}`}
+                  >
+                    <Text
+                      className={`text-center font-medium ${formState.category === category ? "text-white" : "text-gray-700"}`}
+                    >
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Notes Input */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-800 mb-2">
+                Names / Notes
+              </Text>
+              <TextInput
+                className="bg-white p-4 rounded-lg text-gray-800"
+                placeholder="Add notes about this receipt"
+                value={formState.notes}
+                onChangeText={(text) => updateFormField('notes', text)}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+            
+            {/* Amount Input */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-800 mb-2">
+                Amount
+              </Text>
+              <TextInput
+                className="bg-white p-4 rounded-lg text-gray-800"
+                placeholder="Enter amount"
+                value={formState.amount}
+                onChangeText={(text) => updateFormField('amount', text)}
+                keyboardType="numeric"
+              />
+            </View>
+            
+            {/* Vendor Input */}
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-800 mb-2">
+                Vendor
+              </Text>
+              <TextInput
+                className="bg-white p-4 rounded-lg text-gray-800"
+                placeholder="Enter vendor name"
+                value={formState.vendor}
+                onChangeText={(text) => updateFormField('vendor', text)}
+              />
+            </View>
+
+            {/* Location Input */}
+            <View className="mb-8">
+              <Text className="text-lg font-semibold text-gray-800 mb-2">
+                Location
+              </Text>
+              <View className="flex-row items-center bg-white rounded-lg overflow-hidden">
+                <TouchableOpacity 
+                  onPress={handleLocationRequest}
+                  disabled={isLoadingLocation}
+                  className={`p-3 ${isLoadingLocation ? 'bg-gray-100' : ''}`}
+                  accessibilityLabel="Get current location"
+                  accessibilityHint="Requests permission to use your current location"
+                >
+                  <MapPin size={20} color={isLoadingLocation ? "#9ca3af" : "#6b7280"} />
+                </TouchableOpacity>
+                <TextInput
+                  className="flex-1 p-3 text-gray-800"
+                  placeholder={isLoadingLocation ? "Getting location..." : "Add location"}
+                  value={formState.location}
+                  onChangeText={(text) => updateFormField('location', text)}
+                  editable={!isLoadingLocation}
+                />
+              </View>
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              className={`py-4 rounded-lg items-center ${isSubmitting ? "bg-blue-300" : "bg-blue-500"}`}
+            >
+              <Text className="text-white font-bold text-lg">
+                {isSubmitting ? "Saving..." : (isEditing ? "Update Receipt" : "Save Receipt")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
       
       {/* Empty InputAccessoryView to prevent the default iOS keyboard accessory view */}
       {Platform.OS === 'ios' && <InputAccessoryView nativeID="emptyAccessoryView" />}

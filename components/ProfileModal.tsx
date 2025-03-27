@@ -10,7 +10,6 @@ import {
   Alert,
   Platform,
   TextInput,
-  TouchableWithoutFeedback
 } from 'react-native';
 import { X, LogOut, User, Mail, Calendar, Phone, Save, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { useAuth } from '../lib/auth-context';
@@ -175,161 +174,161 @@ const ProfileModal = ({ visible, onClose }: ProfileModalProps) => {
       transparent={true}
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.centeredView}>
-          <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalView}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>User Profile</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={onClose}
-                >
-                  <X size={24} color="#4b5563" />
-                </TouchableOpacity>
-              </View>
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>User Profile</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+            >
+              <X size={24} color="#4b5563" />
+            </TouchableOpacity>
+          </View>
 
-              <ScrollView style={styles.modalContent}>
-                {user ? (
-                  <>
-                    <View style={styles.userAvatarContainer}>
-                      <View style={styles.userAvatar}>
-                        <User size={40} color="#4F46E5" />
-                      </View>
-                    </View>
-
-                    <View style={styles.userInfoSection}>
-                      <Text style={styles.userEmail}>{user.email}</Text>
-
-                      {/* Notification Banner */}
-                      {notification.type && (
-                        <View 
-                          style={[
-                            styles.notification, 
-                            notification.type === 'success' 
-                              ? styles.successNotification 
-                              : styles.errorNotification
-                          ]}
-                        >
-                          {notification.type === 'success' ? (
-                            <CheckCircle size={18} color="#047857" style={styles.notificationIcon} />
-                          ) : (
-                            <AlertCircle size={18} color="#b91c1c" style={styles.notificationIcon} />
-                          )}
-                          <Text 
-                            style={[
-                              styles.notificationText,
-                              notification.type === 'success' 
-                                ? styles.successText 
-                                : styles.errorText
-                            ]}
-                          >
-                            {notification.message}
-                          </Text>
-                        </View>
-                      )}
-
-                      {/* Profile Input Fields */}
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>First Name</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={firstName}
-                          onChangeText={setFirstName}
-                          placeholder="Enter your first name"
-                          placeholderTextColor="#9ca3af"
-                        />
-                      </View>
-
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Last Name</Text>
-                        <TextInput
-                          style={styles.input}
-                          value={lastName}
-                          onChangeText={setLastName}
-                          placeholder="Enter your last name"
-                          placeholderTextColor="#9ca3af"
-                        />
-                      </View>
-
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>Phone Number</Text>
-                        <TextInput
-                          style={[styles.input, phoneError ? styles.inputError : null]}
-                          value={phoneNumber}
-                          onChangeText={handlePhoneChange}
-                          placeholder="Enter your phone number (e.g., 123-456-7890)"
-                          placeholderTextColor="#9ca3af"
-                          keyboardType="phone-pad"
-                        />
-                        {phoneError ? (
-                          <Text style={styles.errorText}>{phoneError}</Text>
-                        ) : null}
-                      </View>
-
-                      <TouchableOpacity 
-                        style={styles.saveButton} 
-                        onPress={handleSaveProfile}
-                        disabled={isSaving || !!phoneError}
-                      >
-                        <Save size={18} color="#1e40af" style={{marginRight: 8}} />
-                        <Text style={styles.saveButtonText}>
-                          {isSaving ? 'Saving...' : 'Save Profile'}
-                        </Text>
-                      </TouchableOpacity>
-
-                      <View style={styles.infoRow}>
-                        <Mail size={16} color="#6b7280" style={styles.infoIcon} />
-                        <View>
-                          <Text style={styles.infoLabel}>Email verified</Text>
-                          <Text style={styles.infoValue}>
-                            {user.email_confirmed_at ? 'Yes' : 'No'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        <Calendar size={16} color="#6b7280" style={styles.infoIcon} />
-                        <View>
-                          <Text style={styles.infoLabel}>Account created</Text>
-                          <Text style={styles.infoValue}>
-                            {formatDate(user.created_at)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        <Calendar size={16} color="#6b7280" style={styles.infoIcon} />
-                        <View>
-                          <Text style={styles.infoLabel}>Last sign in</Text>
-                          <Text style={styles.infoValue}>
-                            {formatDate(user.last_sign_in_at)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <TouchableOpacity 
-                      style={styles.signOutButton} 
-                      onPress={handleSignOut}
-                      disabled={isSigningOut}
-                    >
-                      <LogOut size={18} color="#991b1b" style={{marginRight: 8}} />
-                      <Text style={styles.signOutText}>
-                        {isSigningOut ? 'Signing out...' : 'Sign Out'}
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <View style={styles.notSignedInContainer}>
-                    <Text style={styles.notSignedInText}>Not signed in</Text>
+          <ScrollView 
+            style={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            {user ? (
+              <>
+                <View style={styles.userAvatarContainer}>
+                  <View style={styles.userAvatar}>
+                    <User size={40} color="#4F46E5" />
                   </View>
-                )}
-              </ScrollView>
-            </View>
-          </TouchableWithoutFeedback>
+                </View>
+
+                <View style={styles.userInfoSection}>
+                  <Text style={styles.userEmail}>{user.email}</Text>
+
+                  {/* Notification Banner */}
+                  {notification.type && (
+                    <View 
+                      style={[
+                        styles.notification, 
+                        notification.type === 'success' 
+                          ? styles.successNotification 
+                          : styles.errorNotification
+                      ]}
+                    >
+                      {notification.type === 'success' ? (
+                        <CheckCircle size={18} color="#047857" style={styles.notificationIcon} />
+                      ) : (
+                        <AlertCircle size={18} color="#b91c1c" style={styles.notificationIcon} />
+                      )}
+                      <Text 
+                        style={[
+                          styles.notificationText,
+                          notification.type === 'success' 
+                            ? styles.successText 
+                            : styles.errorText
+                        ]}
+                      >
+                        {notification.message}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Profile Input Fields */}
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>First Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      placeholder="Enter your first name"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Last Name</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={lastName}
+                      onChangeText={setLastName}
+                      placeholder="Enter your last name"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Phone Number</Text>
+                    <TextInput
+                      style={[styles.input, phoneError ? styles.inputError : null]}
+                      value={phoneNumber}
+                      onChangeText={handlePhoneChange}
+                      placeholder="Enter your phone number (e.g., 123-456-7890)"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="phone-pad"
+                    />
+                    {phoneError ? (
+                      <Text style={styles.errorText}>{phoneError}</Text>
+                    ) : null}
+                  </View>
+
+                  <TouchableOpacity 
+                    style={styles.saveButton} 
+                    onPress={handleSaveProfile}
+                    disabled={isSaving || !!phoneError}
+                  >
+                    <Save size={18} color="#1e40af" style={{marginRight: 8}} />
+                    <Text style={styles.saveButtonText}>
+                      {isSaving ? 'Saving...' : 'Save Profile'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.infoRow}>
+                    <Mail size={16} color="#6b7280" style={styles.infoIcon} />
+                    <View>
+                      <Text style={styles.infoLabel}>Email verified</Text>
+                      <Text style={styles.infoValue}>
+                        {user.email_confirmed_at ? 'Yes' : 'No'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Calendar size={16} color="#6b7280" style={styles.infoIcon} />
+                    <View>
+                      <Text style={styles.infoLabel}>Account created</Text>
+                      <Text style={styles.infoValue}>
+                        {formatDate(user.created_at)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Calendar size={16} color="#6b7280" style={styles.infoIcon} />
+                    <View>
+                      <Text style={styles.infoLabel}>Last sign in</Text>
+                      <Text style={styles.infoValue}>
+                        {formatDate(user.last_sign_in_at)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.signOutButton} 
+                  onPress={handleSignOut}
+                  disabled={isSigningOut}
+                >
+                  <LogOut size={18} color="#991b1b" style={{marginRight: 8}} />
+                  <Text style={styles.signOutText}>
+                    {isSigningOut ? 'Signing out...' : 'Sign Out'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.notSignedInContainer}>
+                <Text style={styles.notSignedInText}>Not signed in</Text>
+              </View>
+            )}
+          </ScrollView>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };

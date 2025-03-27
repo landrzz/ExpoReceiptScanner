@@ -74,12 +74,12 @@ export default function AuthScreen({ onPreviewPress }: AuthScreenProps): JSX.Ele
                 <AuthForm />
 
                 {/* Preview UI button */}
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                   className="mt-8 bg-black/30 px-4 py-3 rounded-md self-center"
                   onPress={handlePreviewUI}
                 >
                   <Text className="text-white text-sm font-medium">Preview UI Without Login</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             </View>
           </ScrollView>
